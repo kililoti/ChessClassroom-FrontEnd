@@ -45,13 +45,13 @@ export default function LoginPage() {
       }
 
       // --- PERSISTENCIA DE LA SESIÓN ---
-      // Guardamos el token y los datos del usuario en localStorage
+      // Guardar el token y los datos del usuario en localStorage
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('usuario', JSON.stringify(data.data.usuario));
 
       setStatus({ loading: false, error: '', success: '¡Bienvenido! Redirigiendo...' });
 
-      // Redirigimos al dashboard (puedes cambiar esta ruta luego)
+      // Redirigimos al dashboard
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
