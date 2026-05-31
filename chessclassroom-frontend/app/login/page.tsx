@@ -132,7 +132,7 @@ export default function LoginPage() {
         {/* Link al registro */}
         <p className="mt-8 text-center text-sm text-gray-600">
           ¿No tienes cuenta?{' '}
-          <Link href="/register" className="text-blue-600 font-medium hover:underline">
+          <Link href="/registro" className="text-blue-600 font-medium hover:underline">
             Regístrate aquí
           </Link>
         </p>
