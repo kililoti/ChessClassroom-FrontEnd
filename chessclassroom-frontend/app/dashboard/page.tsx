@@ -82,13 +82,13 @@ export default function DashboardPage() {
         <div className="grid sm:grid-cols-2 gap-6">
           
           {/* Tarjeta 1: Alumnos Particulares */}
-          <Link href="/dashboard/alumnos" className="group">
+          <Link href="/dashboard/particulares" className="group">
             <div className="bg-white h-full border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left">
               <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                 ♟️
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-                Alumnos Particulares
+                Clases Particulares
               </h2>
               <p className="text-slate-500 text-sm leading-relaxed">
                 Gestiona tus clases 1 a 1, analiza el progreso individual de cada alumno, su ELO y el historial de sus partidas.
@@ -97,7 +97,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* Tarjeta 2: Clases Grupales */}
-          <Link href="/dashboard/clases" className="group">
+          <Link href="/dashboard/grupales" className="group">
             <div className="bg-white h-full border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:indigo-300 transition-all duration-300 cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left">
               <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
                 👥
