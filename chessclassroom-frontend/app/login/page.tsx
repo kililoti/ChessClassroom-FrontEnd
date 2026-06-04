@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // <-- Inicializa el hook para leer la URL
 
   const [formData, setFormData] = useState({
     email: '',
@@ -44,22 +45,32 @@ export default function LoginPage() {
         throw new Error(data.message || 'Credenciales incorrectas');
       }
 
-      // --- PERSISTENCIA DE LA SESIÓN ---
-      // Guardar el token y los datos del usuario en localStorage
+      // PERSISTENCIA DE LA SESIÓN
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('usuario', JSON.stringify(data.data.usuario));
 
       setStatus({ loading: false, error: '', success: '¡Bienvenido! Redirigiendo...' });
 
-      // Redirigimos al dashboard
+      // Lee si hay un parámetro 'redirect' en la URL
+      const redirectUrl = searchParams.get('redirect');
+
       setTimeout(() => {
-        router.push('/dashboard');
+        if (redirectUrl) {
+          router.push(redirectUrl); // Lo devuelve a la invitación
+        } else {
+          router.push('/dashboard');
+        }
       }, 1500);
 
     } catch (error: any) {
       setStatus({ loading: false, error: error.message, success: '' });
     }
   };
+
+  // Prepara el link de registro por si el usuario se equivocó de pantalla
+  // pero queremos mantener el código de invitación intacto.
+  const redirectUrl = searchParams.get('redirect');
+  const linkRegistro = redirectUrl ? `/registro?redirect=${redirectUrl}` : '/registro';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -102,7 +113,7 @@ export default function LoginPage() {
           <div>
             <div className="flex justify-between mb-1">
               <label className="text-sm font-medium text-gray-700">Contraseña</label>
-              <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline"> {/* Link con cambio de página a forgot-password */}
+              <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">
                 ¿La has olvidado?
               </Link>
             </div>
@@ -129,10 +140,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Link al registro */}
+        {/* Link al registro*/}
         <p className="mt-8 text-center text-sm text-gray-600">
           ¿No tienes cuenta?{' '}
-          <Link href="/registro" className="text-blue-600 font-medium hover:underline">
+          <Link href={linkRegistro} className="text-blue-600 font-medium hover:underline">
             Regístrate aquí
           </Link>
         </p>

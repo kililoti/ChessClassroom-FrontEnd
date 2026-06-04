@@ -1,12 +1,14 @@
-'use client'; // Directiva obligatoria porque se usan hooks de React (useState)
+'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // <-- Inicializa el hook para leer la URL
   
-  // Estado para los campos del formulario (coincide con tu DTO del backend)
+  // Estado para los campos del formulario
   const [formData, setFormData] = useState({
     nombre: '',
     apellidos: '',
@@ -36,7 +38,6 @@ export default function RegisterPage() {
     setStatus({ loading: true, error: '', success: '' });
 
     try {
-      // Llamada a tu backend (asegúrate de que el backend esté en el puerto 3001)
       const res = await fetch('http://localhost:3001/api/auth/registro', {
         method: 'POST',
         headers: {
@@ -52,17 +53,27 @@ export default function RegisterPage() {
       }
 
       // Si todo va bien
-      setStatus({ loading: false, error: '', success: '¡Cuenta creada con éxito! Redirigiendo...' });
+      setStatus({ loading: false, error: '', success: '¡Cuenta creada con éxito! Redirigiendo al login...' });
       
-      // Redirigir al usuario a la página de login después de 2 segundos
+      // Lee si hay un redirect y se lo pasa a la página de login
+      const redirectUrl = searchParams.get('redirect');
+
       setTimeout(() => {
-        router.push('/login');
+        if (redirectUrl) {
+          router.push(`/login?redirect=${redirectUrl}`); // Pasa el redirect al login
+        } else {
+          router.push('/login');
+        }
       }, 2000);
 
     } catch (error: any) {
       setStatus({ loading: false, error: error.message, success: '' });
     }
   };
+
+  // Preparar el link de login por si el usuario se equivocó de pantalla
+  const redirectUrl = searchParams.get('redirect');
+  const linkLogin = redirectUrl ? `/login?redirect=${redirectUrl}` : '/login';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -168,6 +179,14 @@ export default function RegisterPage() {
             {status.loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </form>
+
+        {/* Link al login */}
+        <p className="mt-8 text-center text-sm text-gray-600">
+          ¿Ya tienes cuenta?{' '}
+          <Link href={linkLogin} className="text-blue-600 font-medium hover:underline">
+            Inicia sesión aquí
+          </Link>
+        </p>
       </div>
     </div>
   );
