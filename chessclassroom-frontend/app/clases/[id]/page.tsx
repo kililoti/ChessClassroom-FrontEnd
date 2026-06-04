@@ -99,6 +99,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
               </svg>
             </button>
             <div>
+              {/* TO DO: TAL VEZ QUITAR LA PARTE DE ALUMNO Y GRUPO Y SOLO MOSTRAR EL NOMBRE DE LA CLASE */}
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
                 {clase.tipo === 'particular' ? (
                   <>
