@@ -5,6 +5,7 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import Planilla from './Planilla';
 import ChatContainer from '@/components/chat/ChatContainer';
+import { ArrowLeft } from 'lucide-react';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const FEN_INICIAL = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -29,29 +30,32 @@ const PROMOTION_PIECES: { piece: PromotionPiece; label: string; white: string; b
 
 // ─── Helpers puros (fuera del componente, sin estado) ────────────────────────
 
-/** Construye una instancia Chess reproduciendo el PGN hasta el índice dado */
 function buildGameAtIndex(pgn: string, index: number): Chess {
   const base = new Chess();
-  if (pgn) base.loadPgn(pgn);
+  if (pgn) {
+    try { base.loadPgn(pgn); } catch (e) {} // Try/catch por seguridad
+  }
   const fullHistory = base.history();
 
   const g = new Chess();
-  fullHistory.slice(0, index).forEach(san => g.move(san));
+  fullHistory.slice(0, index).forEach(san => {
+    try { g.move(san); } catch(e) {}
+  });
   return g;
 }
 
-/** FEN de la posición en un índice concreto del historial */
 function getFenAtIndex(pgn: string, index: number, totalMoves: number): string {
   if (index === 0) return FEN_INICIAL;
   if (index === totalMoves) {
     const g = new Chess();
-    if (pgn) g.loadPgn(pgn);
+    if (pgn) {
+      try { g.loadPgn(pgn); } catch(e) {}
+    }
     return g.fen();
   }
   return buildGameAtIndex(pgn, index).fen();
 }
 
-/** Calcula los estilos base (último mov + jaque) sin tocar el estado */
 function calcularEstilosBase(
   pgn: string,
   indiceVista: number,
@@ -59,7 +63,6 @@ function calcularEstilosBase(
 ): Record<string, React.CSSProperties> {
   const styles: Record<string, React.CSSProperties> = {};
 
-  // Último movimiento
   if (indiceVista > 0) {
     const g = buildGameAtIndex(pgn, indiceVista);
     const hist = g.history({ verbose: true });
@@ -70,7 +73,6 @@ function calcularEstilosBase(
     }
   }
 
-  // Rey en jaque
   const fen = getFenAtIndex(pgn, indiceVista, totalMoves);
   if (fen !== FEN_INICIAL) {
     const temp = new Chess(fen);
@@ -116,12 +118,20 @@ function PromotionModal({ pending, onSelect, onCancel }: {
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
-export default function JuegoAjedrez() {
+
+export interface JuegoAjedrezProps {
+  pgnInicial?: string;
+  onClose?: () => void;
+}
+
+export default function JuegoAjedrez({ 
+  pgnInicial = '', 
+  onClose 
+}: JuegoAjedrezProps) {
   const [isMounted, setIsMounted] = useState(false);
 
-  // ✅ Estado como primitivos: pgn (string) es la fuente de verdad de la partida
-  // Nunca guardamos instancias Chess en el estado → no hay referencias cambiantes
-  const [pgn, setPgn]             = useState<string>('');
+  // Estados principales
+  const [pgn, setPgn]             = useState<string>(pgnInicial);
   const [totalMoves, setTotalMoves] = useState<number>(0);
 
   const [indiceVista, setIndiceVista]   = useState<number>(0);
@@ -131,38 +141,78 @@ export default function JuegoAjedrez() {
   const [error, setError]               = useState<string>('');
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
 
-  // ✅ Caché de la instancia Chess para el presente (evita reconstruir en cada handler)
-  // useRef no dispara renders → seguro usarlo como caché mutable
   const gameRef = useRef<Chess>(new Chess());
 
   useEffect(() => { setIsMounted(true); }, []);
 
-  // Sincronizar el ref cuando cambia el PGN (string primitivo → sin bucle)
+  // 🌟 EL NUEVO CARGADOR A PRUEBA DE BALAS
+  useEffect(() => {
+    if (pgnInicial) {
+      const temp = new Chess();
+      let cargado = false;
+
+      // 1. Limpiamos espacios extra y comillas por si vienen del backend
+      let pgnLimpio = pgnInicial.trim();
+      if (pgnLimpio.startsWith('"') && pgnLimpio.endsWith('"')) {
+        pgnLimpio = pgnLimpio.slice(1, -1).replace(/\\n/g, '\n');
+      }
+
+      // 2. Intentos de carga progresivos
+      const intentos = [
+        pgnLimpio, // Intento 1: Tal cual viene
+        pgnLimpio + '\n\n', // Intento 2: Forzando salto de línea final (arregla el error del asterisco *)
+        pgnLimpio.replace(/\[.*?\]\r?\n?/g, '').trim() + '\n\n' // Intento 3: Quitamos TODAS las etiquetas raras y dejamos solo los movimientos
+      ];
+
+      for (const intento of intentos) {
+        if (cargado) break;
+        try {
+          // En chess.js >= 1.0.0, si falla lanza un error directo al catch
+          temp.loadPgn(intento);
+          // Si sobrevive a la línea anterior sin explotar, es que cargó perfectamente
+          cargado = true; 
+        } catch (e) {
+          // Si falla, salta directamente aquí, lo ignoramos y probamos el siguiente intento
+        }
+      }
+
+      if (cargado) {
+        const historyLength = temp.history().length;
+        // 🌟 CLAVE: Guardamos el PGN re-generado por chess.js (temp.pgn()), 
+        // así nos aseguramos de que el estado pgn siempre tiene un formato 100% perfecto.
+        setPgn(temp.pgn());
+        setTotalMoves(historyLength);
+        setIndiceVista(historyLength);
+      } else {
+        console.error("chess.js no pudo interpretar este PGN tras múltiples intentos. PGN Original:", pgnInicial);
+        setPgn(pgnLimpio); // Mostramos lo que llegó para poder diagnosticarlo
+      }
+    }
+  }, [pgnInicial]);
+
+  // Sincronizar el ref de forma segura
   useEffect(() => {
     const g = new Chess();
-    if (pgn) g.loadPgn(pgn);
+    if (pgn) {
+      try { g.loadPgn(pgn); } catch(e) {}
+    }
     gameRef.current = g;
   }, [pgn]);
 
-  // ✅ useEffect con dependencias 100% primitivas → sin bucle
   useEffect(() => {
     setCasillasBase(calcularEstilosBase(pgn, indiceVista, totalMoves));
     setCasillasInt({});
   }, [pgn, indiceVista, totalMoves]);
 
-  // ── Sonidos ───────────────────────────────────────────────────────────────
   const reproducirSonido = (tipo: 'move' | 'capture') => {
     try { new Audio(`/sounds/${tipo}.mp3`).play().catch(() => {}); } catch {}
   };
 
-  // ── Derivar historial para la Planilla ───────────────────────────────────
-  // gameRef.current ya está sincronizado con el PGN, reutilizamos sin reconstruir
   const gameActual           = gameRef.current;
   const historialMovimientos = gameActual.history({ verbose: true });
   const estamosEnElPresente  = indiceVista === totalMoves;
   const fenVisible           = getFenAtIndex(pgn, indiceVista, totalMoves);
 
-  // ── Navegación planilla ───────────────────────────────────────────────────
   const irAlInicio = () => { if (indiceVista > 0) reproducirSonido('move'); setIndiceVista(0); };
   const irAtras    = () => { setIndiceVista(p => { if (p > 0) { reproducirSonido('move'); return p - 1; } return p; }); };
   const irAdelante = () => {
@@ -179,10 +229,8 @@ export default function JuegoAjedrez() {
     if (indiceVista < totalMoves) { reproducirSonido('move'); setIndiceVista(totalMoves); }
   };
 
-  // ── Aplicar movimiento ────────────────────────────────────────────────────
   const aplicarMovimiento = useCallback((from: string, to: string, promotion: PromotionPiece): boolean => {
     try {
-      // Si estamos en el presente usamos el ref (ya construido), si no reconstruimos solo hasta ese índice
       const gameEnPunto = estamosEnElPresente
         ? (() => { const g = new Chess(); g.loadPgn(gameRef.current.pgn()); return g; })()
         : buildGameAtIndex(pgn, indiceVista);
@@ -191,7 +239,6 @@ export default function JuegoAjedrez() {
 
       reproducirSonido(move.captured ? 'capture' : 'move');
 
-      // El nuevo PGN es el historial hasta indiceVista + el nuevo movimiento
       const nuevoTotal = indiceVista + 1;
       const nuevoPgn   = gameEnPunto.pgn();
 
@@ -200,9 +247,8 @@ export default function JuegoAjedrez() {
       setIndiceVista(nuevoTotal);
       return true;
     } catch { return false; }
-  }, [pgn, indiceVista]);
+  }, [pgn, indiceVista, estamosEnElPresente]);
 
-  // ── Promoción ─────────────────────────────────────────────────────────────
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (!pendingPromotion) return;
     aplicarMovimiento(pendingPromotion.from, pendingPromotion.to, piece);
@@ -215,7 +261,6 @@ export default function JuegoAjedrez() {
     setCasillasInt({});
   }, []);
 
-  // ── onPieceDrop ───────────────────────────────────────────────────────────
   const onPieceDrop = useCallback(({ sourceSquare, targetSquare }: {
     piece: { isSparePiece: boolean; pieceType: string; position: string };
     sourceSquare: string;
@@ -226,15 +271,12 @@ export default function JuegoAjedrez() {
 
     const gameEnPunto = estamosEnElPresente ? gameRef.current : buildGameAtIndex(pgn, indiceVista);
 
-    // Verificar legalidad antes de nada: evita abrir el modal si no es turno del jugador
-    // o si el movimiento no es válido por cualquier otra regla
     const movimientosLegales = gameEnPunto.moves({ verbose: true }) as any[];
     const esLegal = movimientosLegales.some(
       m => m.from === sourceSquare && m.to === targetSquare
     );
     if (!esLegal) return false;
 
-    // Solo si es legal comprobar si requiere promoción
     const pieza = gameEnPunto.get(sourceSquare as any);
     const esPromocion = pieza?.type === 'p' &&
       ((pieza.color === 'w' && targetSquare[1] === '8') ||
@@ -248,7 +290,6 @@ export default function JuegoAjedrez() {
     return aplicarMovimiento(sourceSquare, targetSquare, 'q');
   }, [pgn, indiceVista, estamosEnElPresente, aplicarMovimiento]);
 
-  // ── onPieceDrag ───────────────────────────────────────────────────────────
   const onPieceDrag = useCallback(({ square }: {
     isSparePiece: boolean;
     piece: { pieceType: string };
@@ -256,7 +297,6 @@ export default function JuegoAjedrez() {
   }) => {
     if (!square) return;
     try {
-      // Reutilizar gameRef si estamos en el presente, reconstruir solo si navegamos el historial
       const gameEnPunto = estamosEnElPresente ? gameRef.current : buildGameAtIndex(pgn, indiceVista);
       const movimientos = gameEnPunto.moves({ verbose: true, square: square as any }) as any[];
       if (movimientos.length === 0) return;
@@ -269,11 +309,10 @@ export default function JuegoAjedrez() {
       });
       setCasillasInt(estilos);
     } catch {}
-  }, [pgn, indiceVista]);
+  }, [pgn, indiceVista, estamosEnElPresente]);
 
   const onSquareClick = useCallback(() => { setCasillasInt({}); }, []);
 
-  // ── Reiniciar ─────────────────────────────────────────────────────────────
   const reiniciarPartida = () => {
     setPgn('');
     setTotalMoves(0);
@@ -306,8 +345,16 @@ export default function JuegoAjedrez() {
       )}
 
       {/* Cabecera */}
-      <div className="w-full flex justify-evenly items-center mb-6 mt-4 px-4">
-        <h2 className="text-2xl font-bold text-slate-800">Partida Activa</h2>
+      <div className="w-full flex justify-between items-center mb-6 mt-4 px-4">
+        <div className="flex items-center gap-4">
+          {onClose && (
+            <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors" title="Volver al explorador">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <h2 className="text-2xl font-bold text-slate-800">Partida Activa</h2>
+        </div>
+        
         <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm ${
           gameActual.isGameOver() ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
         }`}>
@@ -315,10 +362,8 @@ export default function JuegoAjedrez() {
         </span>
       </div>
 
-      {/* 3 columnas */}
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-center lg:items-center justify-center">
 
-        {/* Chat */}
         <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[550px] flex flex-col">
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col">
             <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2 shrink-0">
@@ -333,7 +378,6 @@ export default function JuegoAjedrez() {
           </div>
         </div>
 
-        {/* Tablero */}
         <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
           <Chessboard
             options={{
@@ -351,7 +395,6 @@ export default function JuegoAjedrez() {
           />
         </div>
 
-        {/* Planilla */}
         <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[550px]">
           <Planilla
             historialMovimientos={historialMovimientos}
@@ -366,9 +409,8 @@ export default function JuegoAjedrez() {
         </div>
       </div>
 
-      {/* FEN + PGN */}
       <div className="w-full mt-8 px-4 flex flex-col md:flex-row gap-6">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Posición FEN {estamosEnElPresente ? '(Presente)' : '(Pasado)'}
           </label>
@@ -376,15 +418,14 @@ export default function JuegoAjedrez() {
             {fenVisible}
           </div>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Historial PGN</label>
-          <div className="mt-1 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 h-32 overflow-y-auto whitespace-pre-wrap select-all leading-relaxed">
+          <div className="mt-1 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-700 h-32 overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words select-all leading-relaxed">
             {pgn || "La partida aún no ha comenzado..."}
           </div>
         </div>
       </div>
 
-      {/* Controles */}
       <div className="w-full mt-6 px-4 flex justify-end gap-4">
         <button
           onClick={() => setOrientacion(o => o === 'white' ? 'black' : 'white')}
