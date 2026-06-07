@@ -74,7 +74,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
   // Lista de secciones enriquecida con iconos y descripciones para formato tarjeta
   const secciones = [
     { titulo: 'Sala Virtual', ruta: `/clases/${clase.id}/sala-virtual`, icono: '💻', color: 'blue', desc: 'Pizarra interactiva y videollamada' },
-    { titulo: 'Estudio', ruta: `/clases/${clase.id}/materiales`, icono: '📚', color: 'indigo', desc: 'Archivos PDF, teoría y recursos' },
+    { titulo: 'Estudio', ruta: `/clases/${clase.id}/estudios`, icono: '📚', color: 'indigo', desc: 'Archivos PDF, teoría y recursos' },
     { titulo: 'Ejercicios', ruta: `/clases/${clase.id}/ejercicios`, icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
     { titulo: 'Partidas', ruta: `/clases/${clase.id}/partidas`, icono: '♟️', color: 'amber', desc: 'Juega en vivo o revisa el historial' },
     { titulo: 'Datos y ELO', ruta: `/clases/${clase.id}/estadisticas`, icono: '📊', color: 'purple', desc: 'Gráficas de rendimiento y evolución' },
