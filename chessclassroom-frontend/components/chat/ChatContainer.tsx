@@ -68,14 +68,14 @@ export default function ChatContainer({ salaId }: ChatContainerProps) {
           event: 'INSERT',
           schema: 'public',
           table: 'mensajes',
-          filter: `sala_id=eq.${salaId}` // Solo escuchamos esta sala
+          filter: `sala_id=eq.${salaId}` // Solo escucha esta sala
         },
         (payload) => {
           // Cuando llega un mensaje nuevo, comprobar si lo enviamos nosotros u otra persona
           const userStr = localStorage.getItem('usuario');
           if (userStr) {
             const miUsuario = JSON.parse(userStr);
-            // Si el remitente es distinto a mí (es decir, otra persona)
+            // Si el remitente es distinto (otra persona)
             // Ejecutar fetchMensajes de forma silenciosa para actualizar la pantalla
             if (payload.new.remitente_id !== miUsuario.id) {
               fetchMensajes();
@@ -186,7 +186,7 @@ export default function ChatContainer({ salaId }: ChatContainerProps) {
             value={nuevoMensaje}
             onChange={(e) => setNuevoMensaje(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all"
+            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-800 transition-all"
             autoComplete="off"
           />
           <button
