@@ -63,7 +63,7 @@ export function TarjetaCarpeta({ carpeta, esProfesor, onClick, onEliminar, onTog
           <Folder className="w-6 h-6" />
         </div>
         <div className="overflow-hidden min-w-0 flex-1">
-          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-amber-700 transition-colors">{carpeta.nombre}</p>
+          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-amber-700 transition-colors" title={carpeta.nombre}>{carpeta.nombre}</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><User className="w-3 h-3" />{nombreProfesor(carpeta.usuarios)}</span>
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatFecha(carpeta.created_at)}</span>
@@ -100,7 +100,7 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
           <Database className="w-6 h-6" />
         </div>
         <div className="overflow-hidden min-w-0 flex-1 pr-12">
-          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-violet-700 transition-colors">{archivo.nombre}</p>
+          <p className="text-sm font-bold text-slate-800 truncate group-hover:text-violet-700 transition-colors" title={archivo.nombre}>{archivo.nombre}</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}</span>
             <span className="text-[11px] text-violet-600 font-semibold">{archivo.metadata.total_partidas} partidas</span>
@@ -145,7 +145,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           <FileText className="w-5 h-5" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors text-sm">{archivo.nombre}</p>
+          <p className="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors text-sm" title={archivo.nombre}>{archivo.nombre}</p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <CategoriaTag categoria={archivo.categoria} />
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}</span>
