@@ -263,7 +263,7 @@ export default function ExploradorArchivos({
               </h1>
               {/* Breadcrumbs */}
               <nav className="flex items-center gap-1 mt-1 text-sm text-slate-500 font-medium flex-wrap">
-                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors">Raíz</button>
+                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors">Inicio</button>
                 {breadcrumbs.map((bc, i) => (
                   <React.Fragment key={bc.id}>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
