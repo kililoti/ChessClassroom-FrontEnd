@@ -1,33 +1,54 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
 import ExploradorArchivos from '@/components/explorador/ExploradorArchivos';
 import JuegoAjedrez from '@/components/ajedrez/JuegoAjedrez';
+import ChatContainer from '@/components/chat/ChatContainer';
 import { Archivo } from '@/types/explorador';
+
+const API_RECURSOS = 'http://localhost:3001/api/recursos';
+
+function getToken() {
+  return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+}
 
 export default function EstudiosPage() {
   const params  = useParams();
   const claseId = params.id as string;
-  const [visorPgn, setVisorPgn]     = useState<string | null>(null);
+
+  const [visorPgn, setVisorPgn]           = useState<string | null>(null);
   const [archivoActual, setArchivoActual] = useState<Archivo | null>(null);
+  const [salaEstudioId, setSalaEstudioId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!claseId) return;
+    fetch('http://localhost:3001/api/chats', {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(r => r.json())
+      .then(d => {
+        const salas: any[] = d.data ?? [];
+        const sala = salas.find(s => s.clase_id === claseId && s.tipo === 'clase_estudio');
+        if (sala) setSalaEstudioId(sala.id);
+      })
+      .catch(() => {});
+  }, [claseId]);
 
   const handleAbrirPartida = async (archivo: Archivo, indexPartida: number = 0) => {
     try {
-      const token  = localStorage.getItem('token') ?? '';
+      const token     = getToken();
       const archivoId = archivo.id.includes('-p-') ? archivo.id.split('-p-')[0] : archivo.id;
-
-      const res    = await fetch(`http://localhost:3001/api/recursos/descargar/${archivoId}`, {
+      const res       = await fetch(`${API_RECURSOS}/descargar/${archivoId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data   = await res.json();
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       const fileRes = await fetch(data.url);
       let pgnTexto  = await fileRes.text();
 
-      // Si es una database, extraer solo la partida del índice indicado
       if (archivo.metadata.es_base_datos) {
         const bloques = pgnTexto.split(/(?=\[Event ")/g).filter(b => b.trim().startsWith('[Event'));
         pgnTexto = bloques[indexPartida] ?? pgnTexto;
@@ -44,11 +65,24 @@ export default function EstudiosPage() {
         <JuegoAjedrez
           pgnInicial={visorPgn}
           onClose={() => { setVisorPgn(null); setArchivoActual(null); }}
-          chatSalaId="75e576a4-b261-4dfa-8416-a09cd15e2125"
         />
       </div>
     );
   }
+
+  // El chat se pasa como slot al explorador para que lo coloque
+  // en el grid interno, alineado con el título y el contenido
+  const chatSlot = salaEstudioId ? (
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2">
+        <span className="text-xl">💬</span>
+        <h2 className="font-bold text-slate-800">Chat de Estudios</h2>
+      </div>
+      <div className="h-[500px]">
+        <ChatContainer salaId={salaEstudioId} />
+      </div>
+    </div>
+  ) : undefined;
 
   return (
     <ExploradorArchivos
@@ -58,6 +92,7 @@ export default function EstudiosPage() {
       claseId={claseId}
       basePath={`/clases/${claseId}/estudios`}
       onAbrirPartida={handleAbrirPartida}
+      chatSlot={chatSlot}
     />
   );
 }

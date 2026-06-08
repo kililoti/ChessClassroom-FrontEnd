@@ -1,23 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
 import ExploradorArchivos from '@/components/explorador/ExploradorArchivos';
 import JuegoAjedrez from '@/components/ajedrez/JuegoAjedrez';
+import ChatContainer from '@/components/chat/ChatContainer';
 import { Archivo } from '@/types/explorador';
 
+const API = 'http://localhost:3001/api/recursos';
+
+function getToken() {
+  return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+}
+
 export default function EstudiosDatabase() {
-  const params     = useParams();
-  const claseId    = params.id as string;
-  const carpetaId  = params.carpeta_id as string;
-  const archivoId  = params.archivo_id as string;
-  const [visorPgn, setVisorPgn] = useState<string | null>(null);
+  const params    = useParams();
+  const claseId   = params.id as string;
+  const carpetaId = params.carpeta_id as string;
+  const archivoId = params.archivo_id as string;
+
+  const [visorPgn, setVisorPgn]           = useState<string | null>(null);
+  const [archivoActual, setArchivoActual] = useState<Archivo | null>(null);
+  // La database hereda el chat de su carpeta padre
+  const [salaCarpetaId, setSalaCarpetaId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!carpetaId) return;
+    fetch(`${API}/carpetas/${carpetaId}/sala-chat`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success && d.salaId) setSalaCarpetaId(d.salaId); })
+      .catch(() => {});
+  }, [carpetaId]);
 
   const handleAbrirPartida = async (archivo: Archivo, indexPartida: number = 0) => {
     try {
-      const token = localStorage.getItem('token') ?? '';
-      const res   = await fetch(`http://localhost:3001/api/recursos/descargar/${archivoId}`, {
+      const token = getToken();
+      const res   = await fetch(`${API}/descargar/${archivoId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data  = await res.json();
@@ -29,6 +50,7 @@ export default function EstudiosDatabase() {
       const bloques = pgnTexto.split(/(?=\[Event ")/g).filter(b => b.trim().startsWith('[Event'));
       pgnTexto = bloques[indexPartida] ?? pgnTexto;
 
+      setArchivoActual(archivo);
       setVisorPgn(pgnTexto.trim());
     } catch { alert('No se pudo cargar la partida.'); }
   };
@@ -38,12 +60,24 @@ export default function EstudiosDatabase() {
       <div className="min-h-screen bg-slate-50 py-8">
         <JuegoAjedrez
           pgnInicial={visorPgn}
-          onClose={() => setVisorPgn(null)}
-          chatSalaId="75e576a4-b261-4dfa-8416-a09cd15e2125"
+          onClose={() => { setVisorPgn(null); setArchivoActual(null); }}
         />
       </div>
     );
   }
+
+  // Hereda el chat de la carpeta padre
+  const chatSlot = salaCarpetaId ? (
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2">
+        <span className="text-xl">💬</span>
+        <h2 className="font-bold text-slate-800">Chat de la carpeta</h2>
+      </div>
+      <div className="h-[500px]">
+        <ChatContainer salaId={salaCarpetaId} />
+      </div>
+    </div>
+  ) : undefined;
 
   return (
     <ExploradorArchivos
@@ -55,6 +89,7 @@ export default function EstudiosDatabase() {
       archivoId={archivoId}
       basePath={`/clases/${claseId}/estudios`}
       onAbrirPartida={handleAbrirPartida}
+      chatSlot={chatSlot}
     />
   );
 }
