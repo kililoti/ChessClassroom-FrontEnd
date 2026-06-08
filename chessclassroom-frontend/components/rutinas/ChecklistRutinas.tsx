@@ -43,14 +43,20 @@ export default function ChecklistRutinas({
     return 'pendiente';
   };
 
-  // Calcular si estamos en la semana actual para mostrar el botón "Hoy"
+// Calcular si estamos en la semana actual para mostrar el botón "Hoy"
   const getLunesHoy = (): string => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     const dia = d.getDay();
     const diff = dia === 0 ? -6 : 1 - dia;
     d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
+    
+    // Extraemos año, mes y día en hora LOCAL, evitando el desfase de toISOString()
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
   };
 
   const esSemanaActualHoy = semanaActual === getLunesHoy();
