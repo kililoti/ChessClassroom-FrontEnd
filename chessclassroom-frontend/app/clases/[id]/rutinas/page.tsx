@@ -14,13 +14,22 @@ interface Alumno {
   apellidos: string;
 }
 
+// ── Función auxiliar para formatear en HORA LOCAL ──────
+const formatearFechaLocal = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getLunes = (fecha: Date): string => {
   const d = new Date(fecha);
   d.setHours(0, 0, 0, 0);
   const dia = d.getDay();
   const diff = dia === 0 ? -6 : 1 - dia;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  // Usamos el formato local en lugar de toISOString()
+  return formatearFechaLocal(d);
 };
 
 export default function RutinasPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,13 +84,13 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   const semanaAnterior = () => {
     const d = new Date(semanaActual + 'T00:00:00');
     d.setDate(d.getDate() - 7);
-    setSemanaActual(d.toISOString().split('T')[0]);
+    setSemanaActual(formatearFechaLocal(d));
   };
 
   const semanaSiguiente = () => {
     const d = new Date(semanaActual + 'T00:00:00');
     d.setDate(d.getDate() + 7);
-    setSemanaActual(d.toISOString().split('T')[0]);
+    setSemanaActual(formatearFechaLocal(d));
   };
 
   const volverSemanaActual = () => {
