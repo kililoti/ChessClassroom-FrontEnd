@@ -1,4 +1,3 @@
-// components/chess/explorer/ModalSubirPGN.tsx
 'use client';
 
 import { useState, useRef } from 'react';

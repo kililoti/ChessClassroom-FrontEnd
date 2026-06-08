@@ -1,4 +1,3 @@
-// components/chess/ui/PromotionModal.tsx
 'use client';
 
 import { PromotionPiece } from '@/hooks/useChessGame';

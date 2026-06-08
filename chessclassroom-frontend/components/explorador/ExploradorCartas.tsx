@@ -1,11 +1,10 @@
-// components/chess/explorer/ExplorerCards.tsx
 // TarjetaCarpeta, TarjetaDatabase, FilaPartida y helpers visuales compartidos
 'use client';
 
 import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2 } from 'lucide-react';
 import { Carpeta, Archivo, Categoria, CATEGORIA_LABELS, formatFecha, nombreProfesor } from '@/types/explorador';
 
-// ── Helpers visuales ──────────────────────────────────────────────────────────
+// Helpers visuales
 
 export function VisibilidadPill({ visible }: { visible: boolean }) {
   return visible ? (
@@ -48,7 +47,7 @@ export function BtnVisibilidad({ visible, onClick }: {
   );
 }
 
-// ── Tarjeta Carpeta ───────────────────────────────────────────────────────────
+// Tarjeta Carpeta
 
 export function TarjetaCarpeta({ carpeta, esProfesor, onClick, onEliminar, onToggleVisibilidad }: {
   carpeta: Carpeta;
@@ -85,7 +84,7 @@ export function TarjetaCarpeta({ carpeta, esProfesor, onClick, onEliminar, onTog
   );
 }
 
-// ── Tarjeta Database ──────────────────────────────────────────────────────────
+// Tarjeta Database
 
 export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar }: {
   archivo: Archivo;
@@ -125,7 +124,7 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
   );
 }
 
-// ── Fila Partida ──────────────────────────────────────────────────────────────
+// Fila Partida
 
 export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar }: {
   archivo: Archivo;

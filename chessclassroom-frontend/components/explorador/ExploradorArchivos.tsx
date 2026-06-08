@@ -1,4 +1,3 @@
-// components/chess/explorer/ExploradorArchivos.tsx
 // Explorador genérico reutilizable para estudios, ejercicios y tareas.
 // La navegación de carpetas se gestiona por URL (Next.js App Router).
 'use client';
@@ -20,7 +19,7 @@ function getUsuario(): any {
   try { return JSON.parse(localStorage.getItem('usuario') ?? '{}'); } catch { return {}; }
 }
 
-// ─── Tipos de configuración ───────────────────────────────────────────────────
+// Tipos de configuración
 
 export interface ExploradorConfig {
   modulo: string;                    // 'estudio' | 'ejercicio' | 'tarea'
@@ -34,7 +33,7 @@ export interface ExploradorConfig {
   onAbrirPartida: (archivo: Archivo, indexPartida?: number) => void;
 }
 
-// ─── Modal: Crear Carpeta ─────────────────────────────────────────────────────
+// Modal: Crear Carpeta
 
 function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada }: {
   claseId: string; carpetaPadreId: string | null; modulo: string;
@@ -82,7 +81,7 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
   );
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+// Componente principal
 
 export default function ExploradorArchivos({
   modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida,
@@ -103,7 +102,7 @@ export default function ExploradorArchivos({
 
   const estamosEnRaiz = !carpetaId;
 
-  // ── Carga de breadcrumbs desde URL ──────────────────────────────────────────
+  // Carga de breadcrumbs desde URL
   // Cuando el usuario aterriza directamente en una URL anidada, pedimos al backend
   // la cadena de ancestros para reconstruir el breadcrumb completo
   useEffect(() => {
@@ -114,7 +113,7 @@ export default function ExploradorArchivos({
       .catch(() => {});
   }, [carpetaId]);
 
-  // ── Carga del archivo (database) actual desde URL ───────────────────────────
+  // Carga del archivo (database) actual desde URL
   useEffect(() => {
     if (!archivoId) { setDatabaseActual(null); return; }
     fetch(`${API}/archivos/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
@@ -123,7 +122,7 @@ export default function ExploradorArchivos({
       .catch(() => {});
   }, [archivoId]);
 
-  // ── Carga de datos del nivel actual ─────────────────────────────────────────
+  // Carga de datos del nivel actual
   useEffect(() => {
     if (claseId) cargarDatos();
   }, [claseId, carpetaId]);
@@ -151,12 +150,12 @@ export default function ExploradorArchivos({
     finally { setCargando(false); }
   };
 
-  // ── Navegación por URL ───────────────────────────────────────────────────────
+  // Navegación por URL
   const entrarCarpeta = (id: string) => router.push(`${basePath}/${id}`);
   const entrarDatabase = (id: string) => router.push(`${basePath}/${carpetaId}/db/${id}`);
   const volverAtras   = () => router.back();
 
-  // ── Acciones de carpetas ─────────────────────────────────────────────────────
+  // Acciones de carpetas
   const eliminarCarpeta = async (id: string) => {
     if (!confirm('¿Eliminar esta carpeta y todo su contenido?')) return;
     try {
@@ -180,7 +179,7 @@ export default function ExploradorArchivos({
     } catch (e: any) { setError(e.message); }
   };
 
-  // ── Acciones de archivos ─────────────────────────────────────────────────────
+  // Acciones de archivos
   const eliminarArchivo = async (id: string) => {
     if (!confirm('¿Eliminar este archivo de forma permanente?')) return;
     try {
@@ -204,7 +203,7 @@ export default function ExploradorArchivos({
     } catch (e: any) { setError(e.message); }
   };
 
-  // ── Abrir partida individual ─────────────────────────────────────────────────
+  // Abrir partida individual
   const abrirPartidaIndividual = async (archivo: Archivo) => {
     try {
       setCargandoPgn(true);
@@ -213,17 +212,17 @@ export default function ExploradorArchivos({
       if (!res.ok) throw new Error(data.error);
 
       const fileRes = await fetch(data.url);
-      await fileRes.text(); // descargamos pero el PGN lo gestiona la página
+      await fileRes.text(); // descargar pero el PGN lo gestiona la página
 
       onAbrirPartida({ ...archivo, metadata: { ...archivo.metadata, partidas: [{ ...archivo.metadata.partidas[0] }] } });
     } catch (e: any) { setError('No se pudo cargar el archivo PGN.'); }
     finally { setCargandoPgn(false); }
   };
 
-  // ── Abrir partida de una PGN Database ────────────────────────────────────────
+  // Abrir partida de una PGN Database
   const abrirPartidaDeDatabase = (database: Archivo, indexPartida: number) => {
     setCargandoPgn(true);
-    // Dejamos un tick para que React renderice el overlay antes de continuar
+    // Dejar un tick para que React renderice el overlay antes de continuar
     setTimeout(() => {
       onAbrirPartida(database, indexPartida);
     }, 50);
@@ -234,7 +233,7 @@ export default function ExploradorArchivos({
   const tieneSeccionSuperior = carpetas.length > 0 || databases.length > 0;
   const tieneContenido       = tieneSeccionSuperior || partidas.length > 0;
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
+  // Render
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8 relative">
 
@@ -288,13 +287,13 @@ export default function ExploradorArchivos({
 
           {esProfesor && (
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              {/* No mostrar botón de subcarpeta cuando estamos dentro de una database */}
+              {/* No mostrar botón de subcarpeta cuando está dentro de una database */}
               {!archivoId && (
                 <button onClick={() => setModalCarpeta(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold text-sm shadow-sm">
                   <Plus className="w-4 h-4" />{estamosEnRaiz ? 'Nueva carpeta' : 'Subcarpeta'}
                 </button>
               )}
-              {/* Solo mostrar subir PGN cuando estamos en una carpeta (no en raíz ni en database) */}
+              {/* Solo mostrar subir PGN cuando está en una carpeta (no en raíz ni en database) */}
               {carpetaId && !archivoId && (
                 <button onClick={() => setModalPgn(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm">
                   <Upload className="w-4 h-4" /> Subir PGN
@@ -318,7 +317,7 @@ export default function ExploradorArchivos({
         ) : (
           <div className="space-y-10">
 
-            {/* VISTA: Interior de PGN Database */}
+            {/* Interior de PGN Database */}
             {archivoId && databaseActual ? (
               <section>
                 <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
