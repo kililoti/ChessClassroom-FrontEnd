@@ -22,18 +22,21 @@ function getUsuario(): any {
 // Tipos de configuración
 
 export interface ExploradorConfig {
-  modulo: string;                    // 'estudio' | 'ejercicio' | 'tarea'
-  titulo: string;                    // Título de la cabecera
-  icono: React.ReactNode;            // Icono de la cabecera
-  claseId: string;                   // ID de la clase (de los params de la URL)
-  carpetaId?: string;                // ID de carpeta actual (undefined = raíz)
-  archivoId?: string;                // ID de database actual (undefined = no estamos en una)
-  // Rutas base para la navegación — el explorador añade el segmento correspondiente
-  basePath: string;                  // ej: /clase/123/estudios
+  modulo: string;
+  titulo: string;
+  icono: React.ReactNode;
+  claseId: string;
+  carpetaId?: string;
+  archivoId?: string;
+  basePath: string;
   onAbrirPartida: (archivo: Archivo, indexPartida?: number) => void;
+  // Slot opcional para inyectar el chat dentro del layout del explorador.
+  // Cuando se pasa, el explorador usa un grid de 12 columnas igual que VistaClasePage:
+  // chat (4 cols izquierda) + contenido (8 cols derecha)
+  chatSlot?: React.ReactNode;
 }
 
-// Modal: Crear Carpeta
+// Modal Crear Carpeta
 
 function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada }: {
   claseId: string; carpetaPadreId: string | null; modulo: string;
@@ -82,9 +85,8 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
 }
 
 // Componente principal
-
 export default function ExploradorArchivos({
-  modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida,
+  modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida, chatSlot,
 }: ExploradorConfig) {
   const router     = useRouter();
   const usuario    = getUsuario();
@@ -103,7 +105,7 @@ export default function ExploradorArchivos({
   const estamosEnRaiz = !carpetaId;
 
   // Carga de breadcrumbs desde URL
-  // Cuando el usuario aterriza directamente en una URL anidada, pedimos al backend
+  // Cuando el usuario aterriza directamente en una URL anidada, pedir al backend
   // la cadena de ancestros para reconstruir el breadcrumb completo
   useEffect(() => {
     if (!carpetaId) { setBreadcrumbs([]); return; }
@@ -212,7 +214,7 @@ export default function ExploradorArchivos({
       if (!res.ok) throw new Error(data.error);
 
       const fileRes = await fetch(data.url);
-      await fileRes.text(); // descargar pero el PGN lo gestiona la página
+      await fileRes.text(); // descarga pero el PGN lo gestiona la página
 
       onAbrirPartida({ ...archivo, metadata: { ...archivo.metadata, partidas: [{ ...archivo.metadata.partidas[0] }] } });
     } catch (e: any) { setError('No se pudo cargar el archivo PGN.'); }
@@ -235,9 +237,9 @@ export default function ExploradorArchivos({
 
   // Render
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 relative">
 
-      {/* Overlay de carga de PGN — se superpone sin ocultar el explorador */}
+      {/* Overlay de carga de PGN */}
       {cargandoPgn && (
         <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl px-8 py-6 shadow-xl flex items-center gap-4">
@@ -247,10 +249,10 @@ export default function ExploradorArchivos({
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-screen-2xl mx-auto">
 
-        {/* Cabecera */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Cabecera FUERA del grid, ocupa todo el ancho */}
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0">
               <ArrowLeft className="w-5 h-5" />
@@ -287,13 +289,11 @@ export default function ExploradorArchivos({
 
           {esProfesor && (
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              {/* No mostrar botón de subcarpeta cuando está dentro de una database */}
               {!archivoId && (
                 <button onClick={() => setModalCarpeta(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold text-sm shadow-sm">
                   <Plus className="w-4 h-4" />{estamosEnRaiz ? 'Nueva carpeta' : 'Subcarpeta'}
                 </button>
               )}
-              {/* Solo mostrar subir PGN cuando está en una carpeta (no en raíz ni en database) */}
               {carpetaId && !archivoId && (
                 <button onClick={() => setModalPgn(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm">
                   <Upload className="w-4 h-4" /> Subir PGN
@@ -304,17 +304,30 @@ export default function ExploradorArchivos({
         </div>
 
         {error && (
-          <div className="p-4 text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl text-sm font-medium flex items-center gap-2">
+          <div className="mb-6 p-4 text-rose-700 bg-rose-50 border border-rose-200 rounded-2xl text-sm font-medium flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />{error}
           </div>
         )}
 
-        {cargando ? (
-          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <span className="text-sm font-medium">Cargando recursos...</span>
-          </div>
-        ) : (
+        {/* Grid chat izquierda + contenido derecha */}
+        <div className={chatSlot ? 'grid grid-cols-1 lg:grid-cols-12 gap-8 items-start' : ''}>
+
+          {/* Columna izquierda Chat */}
+          {chatSlot && (
+            <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full">
+              {chatSlot}
+            </div>
+          )}
+
+          {/* Columna derecha Contenido del explorador */}
+          <div className={`space-y-8 ${chatSlot ? 'lg:col-span-8 xl:col-span-9' : ''}`}>
+
+            {cargando ? (
+              <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-sm font-medium">Cargando recursos...</span>
+              </div>
+            ) : (
           <div className="space-y-10">
 
             {/* Interior de PGN Database */}
@@ -355,14 +368,14 @@ export default function ExploradorArchivos({
               </div>
             ) : (
               <>
-                {/* SECCIÓN SUPERIOR: Carpetas + Databases */}
+                {/* SECCIÓN SUPERIOR Carpetas + Databases */}
                 {tieneSeccionSuperior && (
                   <section>
                     <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
                       <Folder className="w-4 h-4 text-amber-500" />
                       {estamosEnRaiz ? 'Carpetas' : 'Subcarpetas y Colecciones'}
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${chatSlot ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
                       {carpetas.map(c => (
                         <TarjetaCarpeta key={c.id} carpeta={c} esProfesor={esProfesor}
                           onClick={() => entrarCarpeta(c.id)}
@@ -381,7 +394,7 @@ export default function ExploradorArchivos({
                   </section>
                 )}
 
-                {/* SECCIÓN INFERIOR: Partidas individuales */}
+                {/* SECCIÓN INFERIOR Partidas individuales */}
                 {carpetaId && (
                   <section>
                     <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
@@ -413,6 +426,8 @@ export default function ExploradorArchivos({
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {modalCarpeta && (
