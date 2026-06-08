@@ -1,5 +1,5 @@
 // Viewer completo de ajedrez: tablero + planilla + chat.
-// Ahora delega toda la lógica en useChessGame y el tablero en ChessboardCore.
+// Delega toda la lógica en useChessGame y el tablero en ChessboardCore.
 'use client';
 
 import { useState } from 'react';
@@ -8,18 +8,15 @@ import { useChessGame } from '@/hooks/useChessGame';
 import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
-import ChatContainer from '@/components/chat/ChatContainer';
 
 export interface JuegoAjedrezProps {
   pgnInicial?: string;
   onClose?: () => void;
-  chatSalaId?: string;
 }
 
 export default function JuegoAjedrez({
   pgnInicial = '',
   onClose,
-  chatSalaId,
 }: JuegoAjedrezProps) {
   const [orientacion, setOrientacion] = useState<'white' | 'black'>('white');
 
@@ -72,25 +69,8 @@ export default function JuegoAjedrez({
         </span>
       </div>
 
-      {/* 3 columnas: Chat | Tablero | Planilla */}
+      {/* 2 columnas: Tablero | Planilla */}
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-center justify-center">
-
-        {/* Chat */}
-        {chatSalaId && (
-          <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[550px] flex flex-col">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col">
-              <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2 shrink-0">
-                <span className="text-xl">💬</span>
-                <h2 className="font-bold text-slate-800">Chat de la clase</h2>
-              </div>
-              <div className="flex-1 overflow-hidden relative">
-                <div className="absolute inset-0">
-                  <ChatContainer salaId={chatSalaId} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Tablero */}
         <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
