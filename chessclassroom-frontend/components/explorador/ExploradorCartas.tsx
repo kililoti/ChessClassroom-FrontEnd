@@ -132,7 +132,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
   onClick?: () => void;
   onToggleVisibilidad: () => void;
   onEliminar: () => void;
-  onFechaEntrega?: () => void; // ← solo se pasa cuando modulo === 'ejercicio'
+  onFechaEntrega?: () => void;
 }) {
   const partida = archivo.metadata?.partidas?.[0];
 

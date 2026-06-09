@@ -1,5 +1,3 @@
-// Explorador genérico reutilizable para estudios, ejercicios y tareas.
-// La navegación de carpetas se gestiona por URL (Next.js App Router).
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +6,8 @@ import { Folder, Plus, Upload, ChevronRight, FileText, Database, ArrowLeft, Load
 import { Carpeta, Archivo } from '@/types/explorador';
 import { TarjetaCarpeta, TarjetaDatabase, FilaPartida } from './ExploradorCartas';
 import ModalSubirPGN from './ModalSubirPGN';
+import ModalSubirEjercicio from '@/components/ejercicios/ModalSubirEjercicio';
+import ModalFechaEntrega from '@/components/ejercicios/ModalFechaEntrega';
 
 const API = 'http://localhost:3001/api/recursos';
 
@@ -30,14 +30,11 @@ export interface ExploradorConfig {
   archivoId?: string;
   basePath: string;
   onAbrirPartida: (archivo: Archivo, indexPartida?: number) => void;
-  // Slot opcional para inyectar el chat dentro del layout del explorador.
-  // Cuando se pasa, el explorador usa un grid de 12 columnas igual que VistaClasePage:
-  // chat (4 cols izquierda) + contenido (8 cols derecha)
   chatSlot?: React.ReactNode;
+  rutaVolver?: string;
 }
 
 // Modal Crear Carpeta
-
 function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada }: {
   claseId: string; carpetaPadreId: string | null; modulo: string;
   onClose: () => void; onCreada: () => void;
@@ -85,9 +82,10 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
 }
 
 // Componente principal
+
 export default function ExploradorArchivos({
-  modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida, chatSlot,
-}: ExploradorConfig) {
+  modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida, chatSlot, noPadding = false, rutaVolver,
+}: ExploradorConfig & { noPadding?: boolean }) {
   const router     = useRouter();
   const usuario    = getUsuario();
   const esProfesor = usuario?.rol === 'profesor';
@@ -102,11 +100,11 @@ export default function ExploradorArchivos({
   const [modalCarpeta, setModalCarpeta] = useState(false);
   const [modalPgn, setModalPgn]         = useState(false);
 
+  // Estado para el modal de fecha de entrega
+  const [archivoFechaEntrega, setArchivoFechaEntrega] = useState<Archivo | null>(null);
+
   const estamosEnRaiz = !carpetaId;
 
-  // Carga de breadcrumbs desde URL
-  // Cuando el usuario aterriza directamente en una URL anidada, pedir al backend
-  // la cadena de ancestros para reconstruir el breadcrumb completo
   useEffect(() => {
     if (!carpetaId) { setBreadcrumbs([]); return; }
     fetch(`${API}/carpetas/ancestros/${carpetaId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
@@ -115,7 +113,6 @@ export default function ExploradorArchivos({
       .catch(() => {});
   }, [carpetaId]);
 
-  // Carga del archivo (database) actual desde URL
   useEffect(() => {
     if (!archivoId) { setDatabaseActual(null); return; }
     fetch(`${API}/archivos/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
@@ -124,7 +121,6 @@ export default function ExploradorArchivos({
       .catch(() => {});
   }, [archivoId]);
 
-  // Carga de datos del nivel actual
   useEffect(() => {
     if (claseId) cargarDatos();
   }, [claseId, carpetaId]);
@@ -133,7 +129,6 @@ export default function ExploradorArchivos({
     setCargando(true); setError('');
     try {
       const h = { Authorization: `Bearer ${getToken()}` };
-
       const urlC = `${API}/carpetas?clase_id=${claseId}&modulo=${modulo}${carpetaId ? `&carpeta_padre_id=${carpetaId}` : ''}`;
       const resC = await fetch(urlC, { headers: h });
       const datC = await resC.json();
@@ -152,12 +147,24 @@ export default function ExploradorArchivos({
     finally { setCargando(false); }
   };
 
-  // Navegación por URL
-  const entrarCarpeta = (id: string) => router.push(`${basePath}/${id}`);
+  const entrarCarpeta  = (id: string) => router.push(`${basePath}/${id}`);
   const entrarDatabase = (id: string) => router.push(`${basePath}/${carpetaId}/db/${id}`);
-  const volverAtras   = () => router.back();
 
-  // Acciones de carpetas
+  const volverAtras = () => {
+    if (rutaVolver) { router.push(rutaVolver); return; }
+    if (archivoId) {
+      router.push(`${basePath}/${carpetaId}`);
+    } else if (carpetaId) {
+      if (breadcrumbs.length > 1) {
+        router.push(`${basePath}/${breadcrumbs[breadcrumbs.length - 2].id}`);
+      } else {
+        router.push(basePath);
+      }
+    } else {
+      router.back();
+    }
+  };
+
   const eliminarCarpeta = async (id: string) => {
     if (!confirm('¿Eliminar esta carpeta y todo su contenido?')) return;
     try {
@@ -181,7 +188,6 @@ export default function ExploradorArchivos({
     } catch (e: any) { setError(e.message); }
   };
 
-  // Acciones de archivos
   const eliminarArchivo = async (id: string) => {
     if (!confirm('¿Eliminar este archivo de forma permanente?')) return;
     try {
@@ -205,29 +211,22 @@ export default function ExploradorArchivos({
     } catch (e: any) { setError(e.message); }
   };
 
-  // Abrir partida individual
   const abrirPartidaIndividual = async (archivo: Archivo) => {
     try {
       setCargandoPgn(true);
       const res  = await fetch(`${API}/descargar/${archivo.id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
       const fileRes = await fetch(data.url);
-      await fileRes.text(); // descarga pero el PGN lo gestiona la página
-
+      await fileRes.text();
       onAbrirPartida({ ...archivo, metadata: { ...archivo.metadata, partidas: [{ ...archivo.metadata.partidas[0] }] } });
     } catch (e: any) { setError('No se pudo cargar el archivo PGN.'); }
     finally { setCargandoPgn(false); }
   };
 
-  // Abrir partida de una PGN Database
   const abrirPartidaDeDatabase = (database: Archivo, indexPartida: number) => {
     setCargandoPgn(true);
-    // Dejar un tick para que React renderice el overlay antes de continuar
-    setTimeout(() => {
-      onAbrirPartida(database, indexPartida);
-    }, 50);
+    setTimeout(() => { onAbrirPartida(database, indexPartida); }, 50);
   };
 
   const databases = archivos.filter(a => a.metadata?.es_base_datos);
@@ -235,11 +234,9 @@ export default function ExploradorArchivos({
   const tieneSeccionSuperior = carpetas.length > 0 || databases.length > 0;
   const tieneContenido       = tieneSeccionSuperior || partidas.length > 0;
 
-  // Render
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 relative">
 
-      {/* Overlay de carga de PGN */}
       {cargandoPgn && (
         <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl px-8 py-6 shadow-xl flex items-center gap-4">
@@ -251,7 +248,6 @@ export default function ExploradorArchivos({
 
       <div className="max-w-screen-2xl mx-auto">
 
-        {/* Cabecera FUERA del grid, ocupa todo el ancho */}
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0">
@@ -261,9 +257,8 @@ export default function ExploradorArchivos({
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                 {icono} {titulo}
               </h1>
-              {/* Breadcrumbs */}
               <nav className="flex items-center gap-1 mt-1 text-sm text-slate-500 font-medium flex-wrap">
-                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors">Inicio</button>
+                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors">Raíz</button>
                 {breadcrumbs.map((bc, i) => (
                   <React.Fragment key={bc.id}>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -296,7 +291,7 @@ export default function ExploradorArchivos({
               )}
               {carpetaId && !archivoId && (
                 <button onClick={() => setModalPgn(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm">
-                  <Upload className="w-4 h-4" /> Subir PGN
+                  <Upload className="w-4 h-4" /> {modulo === 'ejercicio' ? 'Subir ejercicio' : 'Subir PGN'}
                 </button>
               )}
             </div>
@@ -309,123 +304,119 @@ export default function ExploradorArchivos({
           </div>
         )}
 
-        {/* Grid chat izquierda + contenido derecha */}
         <div className={chatSlot ? 'grid grid-cols-1 lg:grid-cols-12 gap-8 items-start' : ''}>
-
-          {/* Columna izquierda Chat */}
           {chatSlot && (
             <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full">
               {chatSlot}
             </div>
           )}
 
-          {/* Columna derecha Contenido del explorador */}
           <div className={`space-y-8 ${chatSlot ? 'lg:col-span-8 xl:col-span-9' : ''}`}>
-
             {cargando ? (
               <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span className="text-sm font-medium">Cargando recursos...</span>
               </div>
             ) : (
-          <div className="space-y-10">
+              <div className="space-y-10">
 
-            {/* Interior de PGN Database */}
-            {archivoId && databaseActual ? (
-              <section>
-                <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                  <FileText className="w-4 h-4 text-violet-500" />
-                  Partidas indexadas ({databaseActual.metadata?.partidas?.length ?? 0})
-                </h2>
-                <div className="flex flex-col gap-3">
-                  {databaseActual.metadata?.partidas?.map((partida) => {
-                    const fake: Archivo = {
-                      ...databaseActual,
-                      id: `${databaseActual.id}-p-${partida.index}`,
-                      nombre: `Partida ${partida.index + 1}`,
-                      metadata: { ...databaseActual.metadata, es_base_datos: false, partidas: [partida] },
-                    };
-                    return (
-                      <FilaPartida
-                        key={fake.id} archivo={fake} esProfesor={esProfesor}
-                        onClick={() => abrirPartidaDeDatabase(databaseActual, partida.index)}
-                        onToggleVisibilidad={() => toggleVisibilidadArchivo(databaseActual.id, databaseActual.visible)}
-                        onEliminar={() => alert('Para eliminar una partida específica, borra o actualiza el archivo PGN Database completo.')}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            ) : !tieneContenido ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-4 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
-                  <Folder className="w-8 h-8 text-slate-400" />
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-700">{estamosEnRaiz ? 'No hay carpetas creadas' : 'Esta carpeta está vacía'}</p>
-                  <p className="text-sm text-slate-400 mt-1">{estamosEnRaiz ? 'Crea una carpeta para organizar el material.' : 'Sube archivos PGN o crea subcarpetas.'}</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* SECCIÓN SUPERIOR Carpetas + Databases */}
-                {tieneSeccionSuperior && (
+                {archivoId && databaseActual ? (
                   <section>
                     <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                      <Folder className="w-4 h-4 text-amber-500" />
-                      {estamosEnRaiz ? 'Carpetas' : 'Subcarpetas y Colecciones'}
+                      <FileText className="w-4 h-4 text-violet-500" />
+                      Partidas indexadas ({databaseActual.metadata?.partidas?.length ?? 0})
                     </h2>
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${chatSlot ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
-                      {carpetas.map(c => (
-                        <TarjetaCarpeta key={c.id} carpeta={c} esProfesor={esProfesor}
-                          onClick={() => entrarCarpeta(c.id)}
-                          onEliminar={() => eliminarCarpeta(c.id)}
-                          onToggleVisibilidad={() => toggleVisibilidadCarpeta(c.id, c.visible)}
-                        />
-                      ))}
-                      {databases.map(a => (
-                        <TarjetaDatabase key={a.id} archivo={a} esProfesor={esProfesor}
-                          onClick={() => entrarDatabase(a.id)}
-                          onToggleVisibilidad={() => toggleVisibilidadArchivo(a.id, a.visible)}
-                          onEliminar={() => eliminarArchivo(a.id)}
-                        />
-                      ))}
+                    <div className="flex flex-col gap-3">
+                      {databaseActual.metadata?.partidas?.map((partida) => {
+                        const fake: Archivo = {
+                          ...databaseActual,
+                          id: `${databaseActual.id}-p-${partida.index}`,
+                          nombre: `Partida ${partida.index + 1}`,
+                          metadata: { ...databaseActual.metadata, es_base_datos: false, partidas: [partida] },
+                        };
+                        return (
+                          <FilaPartida
+                            key={fake.id} archivo={fake} esProfesor={esProfesor}
+                            onClick={() => abrirPartidaDeDatabase(databaseActual, partida.index)}
+                            onToggleVisibilidad={() => toggleVisibilidadArchivo(databaseActual.id, databaseActual.visible)}
+                            onEliminar={() => alert('Para eliminar una partida específica, borra o actualiza el archivo PGN Database completo.')}
+                          />
+                        );
+                      })}
                     </div>
                   </section>
-                )}
-
-                {/* SECCIÓN INFERIOR Partidas individuales */}
-                {carpetaId && (
-                  <section>
-                    <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                      <FileText className="w-4 h-4 text-blue-500" /> Partidas Individuales
-                    </h2>
-                    {partidas.length > 0 ? (
-                      <div className="flex flex-col gap-3">
-                        {partidas.map(a => (
-                          <FilaPartida key={a.id} archivo={a} esProfesor={esProfesor}
-                            onClick={() => abrirPartidaIndividual(a)}
-                            onToggleVisibilidad={() => toggleVisibilidadArchivo(a.id, a.visible)}
-                            onEliminar={() => eliminarArchivo(a.id)}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 bg-white border border-dashed border-slate-300 rounded-2xl text-center">
-                        <p className="text-slate-500 text-sm">No hay partidas individuales en esta carpeta.</p>
-                        {esProfesor && (
-                          <button onClick={() => setModalPgn(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-semibold transition-colors">
-                            <Upload className="w-4 h-4" /> Subir primera partida
-                          </button>
-                        )}
-                      </div>
+                ) : !tieneContenido ? (
+                  <div className="py-20 flex flex-col items-center justify-center gap-4 text-center">
+                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
+                      <Folder className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-700">{estamosEnRaiz ? 'No hay carpetas creadas' : 'Esta carpeta está vacía'}</p>
+                      <p className="text-sm text-slate-400 mt-1">{estamosEnRaiz ? 'Crea una carpeta para organizar el material.' : 'Sube archivos PGN o crea subcarpetas.'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {tieneSeccionSuperior && (
+                      <section>
+                        <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
+                          <Folder className="w-4 h-4 text-amber-500" />
+                          {estamosEnRaiz ? 'Carpetas' : 'Subcarpetas y Colecciones'}
+                        </h2>
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${chatSlot ? 'xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'}`}>
+                          {carpetas.map(c => (
+                            <TarjetaCarpeta key={c.id} carpeta={c} esProfesor={esProfesor}
+                              onClick={() => entrarCarpeta(c.id)}
+                              onEliminar={() => eliminarCarpeta(c.id)}
+                              onToggleVisibilidad={() => toggleVisibilidadCarpeta(c.id, c.visible)}
+                            />
+                          ))}
+                          {databases.map(a => (
+                            <TarjetaDatabase key={a.id} archivo={a} esProfesor={esProfesor}
+                              onClick={() => entrarDatabase(a.id)}
+                              onToggleVisibilidad={() => toggleVisibilidadArchivo(a.id, a.visible)}
+                              onEliminar={() => eliminarArchivo(a.id)}
+                            />
+                          ))}
+                        </div>
+                      </section>
                     )}
-                  </section>
+
+                    {carpetaId && (
+                      <section>
+                        <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
+                          <FileText className="w-4 h-4 text-blue-500" /> Partidas Individuales
+                        </h2>
+                        {partidas.length > 0 ? (
+                          <div className="flex flex-col gap-3">
+                            {partidas.map(a => (
+                              <FilaPartida key={a.id} archivo={a} esProfesor={esProfesor}
+                                onClick={() => abrirPartidaIndividual(a)}
+                                onToggleVisibilidad={() => toggleVisibilidadArchivo(a.id, a.visible)}
+                                onEliminar={() => eliminarArchivo(a.id)}
+                                onFechaEntrega={modulo === 'ejercicio'
+                                  ? () => setArchivoFechaEntrega(a)
+                                  : undefined
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 bg-white border border-dashed border-slate-300 rounded-2xl text-center">
+                            <p className="text-slate-500 text-sm">No hay partidas individuales en esta carpeta.</p>
+                            {esProfesor && (
+                              <button onClick={() => setModalPgn(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-semibold transition-colors">
+                                <Upload className="w-4 h-4" /> Subir primera partida
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </section>
+                    )}
+                  </>
                 )}
-              </>
+              </div>
             )}
-          </div>
-        )}
           </div>
         </div>
       </div>
@@ -437,7 +428,19 @@ export default function ExploradorArchivos({
         />
       )}
       {modalPgn && carpetaId && (
-        <ModalSubirPGN carpetaId={carpetaId} onClose={() => setModalPgn(false)} onSubido={cargarDatos} />
+        modulo === 'ejercicio'
+          ? <ModalSubirEjercicio carpetaId={carpetaId} onClose={() => setModalPgn(false)} onSubido={cargarDatos} />
+          : <ModalSubirPGN carpetaId={carpetaId} onClose={() => setModalPgn(false)} onSubido={cargarDatos} />
+      )}
+
+      {/* Modal fecha de entrega solo módulo ejercicio */}
+      {archivoFechaEntrega && (
+        <ModalFechaEntrega
+          archivoId={archivoFechaEntrega.id}
+          nombreEjercicio={archivoFechaEntrega.nombre}
+          onClose={() => setArchivoFechaEntrega(null)}
+          onGuardada={() => { setArchivoFechaEntrega(null); cargarDatos(); }}
+        />
       )}
     </div>
   );
