@@ -438,6 +438,10 @@ export default function ExploradorArchivos({
         <ModalFechaEntrega
           archivoId={archivoFechaEntrega.id}
           nombreEjercicio={archivoFechaEntrega.nombre}
+          
+          fechaInicioActual={archivoFechaEntrega.metadata_ejercicio?.fecha_inicio}
+          fechaEntregaActual={archivoFechaEntrega.metadata_ejercicio?.fecha_entrega}
+          
           onClose={() => setArchivoFechaEntrega(null)}
           onGuardada={() => { setArchivoFechaEntrega(null); cargarDatos(); }}
         />

@@ -61,6 +61,7 @@ export type EstadoEjercicio = 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
 
 export interface MetadataEjercicio {
   id_ejercicio?: string;
+  fecha_inicio?: string | null;
   fecha_entrega?: string | null;
   solucion_pgn?: string | null;
   estado_alumno?: EstadoEjercicio;

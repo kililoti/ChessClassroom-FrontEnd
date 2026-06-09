@@ -49,27 +49,44 @@ export function BtnVisibilidad({ visible, onClick }: {
 
 // Helpers para Ejercicios
 
-export function EstadoEjercicioPill({ fechaEntrega, solucionGuardada }: { fechaEntrega?: string | null; solucionGuardada?: boolean }) {
-  if (!fechaEntrega || !solucionGuardada) {
+export function EstadoEjercicioPill({ 
+  fechaInicio, 
+  fechaEntrega, 
+  solucionPgn
+}: { 
+  fechaInicio?: string | null; 
+  fechaEntrega?: string | null;
+  solucionPgn?: string | null;
+}) {
+
+  if (!solucionPgn) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200" title="Falta establecer la fecha o grabar la solución para asignar a los alumnos.">
-        <AlertCircle className="w-2.5 h-2.5" /> Inactivo
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Añade la solución para que los alumnos puedan verlo">
+        <AlertCircle className="w-2.5 h-2.5" /> Sin solución
       </span>
     );
   }
 
-  const superado = new Date() > new Date(fechaEntrega);
-
-  if (superado) {
+  const ahora = new Date();
+  
+  if (fechaInicio && new Date(fechaInicio) > ahora) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100" title="La fecha de entrega ha pasado.">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+        <Clock className="w-2.5 h-2.5" /> Próximamente
+      </span>
+    );
+  }
+
+  if (fechaEntrega && new Date(fechaEntrega) < ahora) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100">
         <CheckCircle2 className="w-2.5 h-2.5" /> Finalizado
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100" title="Asignado a los alumnos y dentro del plazo.">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
       <PlayCircle className="w-2.5 h-2.5" /> Activo
     </span>
   );
@@ -177,46 +194,67 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
 
 // Fila Partida
 
-export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar, onFechaEntrega }: {
-  archivo: Archivo;
-  esProfesor: boolean;
-  onClick?: () => void;
-  onToggleVisibilidad: () => void;
-  onEliminar: () => void;
-  onFechaEntrega?: () => void;
-}) {
-  const partida = archivo.metadata?.partidas?.[0];
-  
+export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar, onFechaEntrega }: any) {
   const metaEj = archivo.metadata_ejercicio;
-  const esModuloEjercicio = !!onFechaEntrega || !!metaEj;
+  const partida = archivo.metadata?.partidas?.[0];
+
+  const ahora = new Date();
+  const esVencido = metaEj?.fecha_entrega ? ahora > new Date(metaEj.fecha_entrega) : false;
+  const esFuturo = metaEj?.fecha_inicio ? ahora < new Date(metaEj.fecha_inicio) : false;
+
+  // Lógica de bloqueo
+  const estaBloqueadoParaAlumno = !esProfesor && esFuturo;
+
+  const handleClick = () => {
+    // Si es alumno y el ejercicio está en el futuro, mostrar alerta y no le deja entrar
+    if (estaBloqueadoParaAlumno) {
+      alert(`Este ejercicio no estará disponible hasta el ${formatFecha(metaEj.fecha_inicio)}`);
+      return;
+    }
+    if (onClick) onClick();
+  };
 
   return (
     <div
-      onClick={onClick}
-      className={`group relative bg-white border rounded-xl px-5 py-4 shadow-sm hover:shadow-md transition-all flex flex-col xl:flex-row xl:items-center justify-between gap-4 cursor-pointer ${!archivo.visible ? 'opacity-70' : 'hover:border-blue-200'} border-slate-200`}
+      onClick={handleClick}
+      // Cambia el diseño si está bloqueado (opaco, sin hover, fondo gris)
+      className={`group relative bg-white border border-slate-200 rounded-xl px-5 py-4 transition-all flex flex-col xl:flex-row xl:items-center justify-between gap-4 
+      ${estaBloqueadoParaAlumno ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'cursor-pointer hover:shadow-md hover:border-blue-200'}
+      ${!archivo.visible ? 'opacity-70' : ''}`}
     >
       {/* Zona Izquierda: Icono e Info Básica */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+        <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center transition-colors 
+        ${estaBloqueadoParaAlumno ? 'bg-slate-200 text-slate-400' : 'bg-blue-50 text-blue-500 group-hover:bg-blue-600 group-hover:text-white'}`}>
           <FileText className="w-5 h-5" />
         </div>
+        
         <div className="min-w-0">
-          <p className="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors text-sm" title={archivo.nombre}>{archivo.nombre}</p>
+          <p className={`font-bold truncate text-sm transition-colors ${estaBloqueadoParaAlumno ? 'text-slate-500' : 'text-slate-900 group-hover:text-blue-600'}`} title={archivo.nombre}>
+            {archivo.nombre}
+          </p>
           
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <CategoriaTag categoria={archivo.categoria} />
             
-            {esModuloEjercicio ? (
+            {metaEj ? (
               <>
                 <EstadoEjercicioPill 
-                  fechaEntrega={metaEj?.fecha_entrega} 
-                  solucionGuardada={!!metaEj?.solucion_pgn} 
+                  fechaInicio={metaEj.fecha_inicio} 
+                  fechaEntrega={metaEj.fecha_entrega} 
+                  solucionPgn={metaEj.solucion_pgn}
                 />
-                {metaEj?.fecha_entrega && (
-                  <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
-                    <Clock className="w-3 h-3" /> Vence: {formatFecha(metaEj.fecha_entrega)}
+                
+                {/* Si es futuro, mostrar "Disponible el". Si no, y hay fecha_entrega, mostrar "Vence" */}
+                {esFuturo ? (
+                  <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    <Calendar className="w-3 h-3" /> Disponible el: {formatFecha(metaEj.fecha_inicio)}
                   </span>
-                )}
+                ) : metaEj.fecha_entrega ? (
+                  <span className={`text-[11px] flex items-center gap-1 font-medium px-2 py-0.5 rounded-full ${esVencido ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <Clock className="w-3 h-3" /> {esVencido ? 'Vencido' : `Vence: ${formatFecha(metaEj.fecha_entrega)}`}
+                  </span>
+                ) : null}
               </>
             ) : (
               <span className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatFecha(archivo.created_at)}</span>
@@ -227,9 +265,11 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
         </div>
       </div>
 
-      {/* Zona Derecha: Jugadores, Estado del Alumno y Botones */}
+      {/* Zona Derecha: Jugadores, Estado y Botones */}
       <div className="flex items-center flex-wrap gap-3 shrink-0">
-        {partida && (
+        
+        {/* Jugadores (solo si no es un ejercicio) */}
+        {!metaEj && partida && (
           <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5">
             <div className="flex flex-col gap-0.5 text-right">
               <span className="text-xs font-semibold text-slate-800 flex items-center justify-end gap-1.5">
@@ -246,8 +286,8 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </div>
         )}
 
-        {/* Estado personal del alumno */}
-        {!esProfesor && esModuloEjercicio && metaEj?.estado_alumno && (
+        {/* Estado personal del alumno (ocultar si el ejercicio está bloqueado) */}
+        {!esProfesor && metaEj && !estaBloqueadoParaAlumno && (
           <EstadoAlumnoPill estado={metaEj.estado_alumno} />
         )}
 
@@ -257,7 +297,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
             {onFechaEntrega && (
               <button
                 onClick={e => { e.stopPropagation(); onFechaEntrega(); }}
-                title="Establecer fecha de entrega"
+                title="Establecer fechas"
                 className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5" />

@@ -32,6 +32,7 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
   const [archivo, setArchivo]         = useState<File | null>(null);
   const [textoFenPgn, setTextoFenPgn] = useState('');
   const [solucionPgn, setSolucionPgn] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [comentarioSolucion, setComentarioSolucion] = useState('');
   const [loading, setLoading]         = useState(false);
@@ -46,6 +47,15 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
   const handleSubir = async () => {
     if (!puedeSubir) return;
     setLoading(true); setError('');
+
+    if (fechaInicio && fechaEntrega) {
+      if (new Date(fechaInicio) > new Date(fechaEntrega)) {
+        setError('La fecha de inicio no puede ser posterior a la fecha de entrega.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const form = new FormData();
       form.append('carpeta_id', carpetaId);
@@ -53,6 +63,7 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
       if (nombre.trim()) form.append('nombre', nombre.trim());
       if (solucionPgn.trim()) form.append('solucion_pgn', solucionPgn.trim());
       
+      if (fechaInicio) form.append('fecha_inicio', new Date(`${fechaInicio}T00:00:00`).toISOString());
       if (fechaEntrega) form.append('fecha_entrega', new Date(`${fechaEntrega}T23:59:59`).toISOString());
       
       if (comentarioSolucion.trim()) form.append('comentarios_solucion', comentarioSolucion.trim());
@@ -184,21 +195,34 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
             </div>
           )}
 
-          {/* Nombre y fecha en la misma fila */}
+          {/* Nombre */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+              Nombre <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+            </label>
+            <input
+              className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
+              value={nombre} onChange={e => setNombre(e.target.value)}
+              placeholder="Ej: Táctica del alfil"
+            />
+          </div>
+
+          {/* Fecha de inicio y Fecha de entrega juntas */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
-                Nombre <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-blue-500" /> Fecha de inicio <span className="text-slate-400 font-normal normal-case">(opcional)</span>
               </label>
               <input
+                type="date"
+                lang="es-ES"
                 className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
-                value={nombre} onChange={e => setNombre(e.target.value)}
-                placeholder="Ej: Táctica del alfil"
+                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
               />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Fecha de entrega <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+                <Calendar className="w-3 h-3 text-red-500" /> Fecha de entrega <span className="text-slate-400 font-normal normal-case">(opcional)</span>
               </label>
               <input
                 type="date"
@@ -217,7 +241,7 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {categorias.map(([key, { label, color }]) => (
                 <button
-                  key={key} onClick={() => setCategoria(key)}
+                  key={key} type="button" onClick={() => setCategoria(key)}
                   className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left ${
                     categoria === key ? `${color} border-current` : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
                   }`}
@@ -230,8 +254,9 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
         </div>
 
         <div className="flex gap-2 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
           <button
+            type="button"
             onClick={handleSubir} disabled={!puedeSubir}
             title={hayConflicto ? 'Usa solo un método de entrada' : !categoria ? 'Selecciona una categoría' : ''}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
