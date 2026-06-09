@@ -1,7 +1,7 @@
 // TarjetaCarpeta, TarjetaDatabase, FilaPartida y helpers visuales compartidos
 'use client';
 
-import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2 } from 'lucide-react';
+import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2, Clock } from 'lucide-react';
 import { Carpeta, Archivo, Categoria, CATEGORIA_LABELS, formatFecha, nombreProfesor } from '@/types/explorador';
 
 // Helpers visuales
@@ -126,12 +126,13 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
 
 // Fila Partida
 
-export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar }: {
+export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar, onFechaEntrega }: {
   archivo: Archivo;
   esProfesor: boolean;
   onClick?: () => void;
   onToggleVisibilidad: () => void;
   onEliminar: () => void;
+  onFechaEntrega?: () => void; // ← solo se pasa cuando modulo === 'ejercicio'
 }) {
   const partida = archivo.metadata?.partidas?.[0];
 
@@ -175,6 +176,16 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
 
         {esProfesor && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Botón fecha de entrega: solo cuando el explorador lo inyecta (módulo ejercicio) */}
+            {onFechaEntrega && (
+              <button
+                onClick={e => { e.stopPropagation(); onFechaEntrega(); }}
+                title="Establecer fecha de entrega"
+                className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-all cursor-pointer"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+            )}
             <BtnVisibilidad visible={archivo.visible} onClick={e => { e.stopPropagation(); onToggleVisibilidad(); }} />
             <button onClick={e => { e.stopPropagation(); onEliminar(); }} title="Eliminar archivo" className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer">
               <Trash2 className="w-3.5 h-3.5" />
