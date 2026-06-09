@@ -1,7 +1,7 @@
 // TarjetaCarpeta, TarjetaDatabase, FilaPartida y helpers visuales compartidos
 'use client';
 
-import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2, Clock } from 'lucide-react';
+import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2, Clock, CheckCircle2, PlayCircle, AlertCircle } from 'lucide-react';
 import { Carpeta, Archivo, Categoria, CATEGORIA_LABELS, formatFecha, nombreProfesor } from '@/types/explorador';
 
 // Helpers visuales
@@ -47,8 +47,61 @@ export function BtnVisibilidad({ visible, onClick }: {
   );
 }
 
-// Tarjeta Carpeta
+// Helpers para Ejercicios
 
+export function EstadoEjercicioPill({ fechaEntrega, solucionGuardada }: { fechaEntrega?: string | null; solucionGuardada?: boolean }) {
+  if (!fechaEntrega || !solucionGuardada) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200" title="Falta establecer la fecha o grabar la solución para asignar a los alumnos.">
+        <AlertCircle className="w-2.5 h-2.5" /> Inactivo
+      </span>
+    );
+  }
+
+  const superado = new Date() > new Date(fechaEntrega);
+
+  if (superado) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100" title="La fecha de entrega ha pasado.">
+        <CheckCircle2 className="w-2.5 h-2.5" /> Finalizado
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100" title="Asignado a los alumnos y dentro del plazo.">
+      <PlayCircle className="w-2.5 h-2.5" /> Activo
+    </span>
+  );
+}
+
+export function EstadoAlumnoPill({ estado }: { estado?: 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO' }) {
+  if (!estado) return null;
+
+  switch (estado) {
+    case 'COMPLETADO':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+          <CheckCircle2 className="w-2.5 h-2.5" /> Completado
+        </span>
+      );
+    case 'EN_PROGRESO':
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+          <Clock className="w-2.5 h-2.5" /> En Progreso
+        </span>
+      );
+    case 'NO_INICIADO':
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+          <AlertCircle className="w-2.5 h-2.5" /> No Iniciado
+        </span>
+      );
+  }
+}
+
+// Tarjetas
 export function TarjetaCarpeta({ carpeta, esProfesor, onClick, onEliminar, onToggleVisibilidad }: {
   carpeta: Carpeta;
   esProfesor: boolean;
@@ -83,8 +136,6 @@ export function TarjetaCarpeta({ carpeta, esProfesor, onClick, onEliminar, onTog
     </div>
   );
 }
-
-// Tarjeta Database
 
 export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar }: {
   archivo: Archivo;
@@ -135,28 +186,49 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
   onFechaEntrega?: () => void;
 }) {
   const partida = archivo.metadata?.partidas?.[0];
+  
+  const metaEj = archivo.metadata_ejercicio;
+  const esModuloEjercicio = !!onFechaEntrega || !!metaEj;
 
   return (
     <div
       onClick={onClick}
-      className={`group relative bg-white border rounded-xl px-5 py-4 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer ${!archivo.visible ? 'opacity-70' : 'hover:border-blue-200'} border-slate-200`}
+      className={`group relative bg-white border rounded-xl px-5 py-4 shadow-sm hover:shadow-md transition-all flex flex-col xl:flex-row xl:items-center justify-between gap-4 cursor-pointer ${!archivo.visible ? 'opacity-70' : 'hover:border-blue-200'} border-slate-200`}
     >
+      {/* Zona Izquierda: Icono e Info Básica */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className="w-10 h-10 shrink-0 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
           <FileText className="w-5 h-5" />
         </div>
         <div className="min-w-0">
           <p className="font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors text-sm" title={archivo.nombre}>{archivo.nombre}</p>
+          
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <CategoriaTag categoria={archivo.categoria} />
-            <span className="text-[11px] text-slate-400 flex items-center gap-1"><User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}</span>
-            <span className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatFecha(archivo.created_at)}</span>
+            
+            {esModuloEjercicio ? (
+              <>
+                <EstadoEjercicioPill 
+                  fechaEntrega={metaEj?.fecha_entrega} 
+                  solucionGuardada={!!metaEj?.solucion_pgn} 
+                />
+                {metaEj?.fecha_entrega && (
+                  <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+                    <Clock className="w-3 h-3" /> Vence: {formatFecha(metaEj.fecha_entrega)}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatFecha(archivo.created_at)}</span>
+            )}
+
             {esProfesor && <VisibilidadPill visible={archivo.visible} />}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      {/* Zona Derecha: Jugadores, Estado del Alumno y Botones */}
+      <div className="flex items-center flex-wrap gap-3 shrink-0">
         {partida && (
           <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5">
             <div className="flex flex-col gap-0.5 text-right">
@@ -174,9 +246,14 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </div>
         )}
 
+        {/* Estado personal del alumno */}
+        {!esProfesor && esModuloEjercicio && metaEj?.estado_alumno && (
+          <EstadoAlumnoPill estado={metaEj.estado_alumno} />
+        )}
+
+        {/* Botones de acción del profesor */}
         {esProfesor && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {/* Botón fecha de entrega: solo cuando el explorador lo inyecta (módulo ejercicio) */}
             {onFechaEntrega && (
               <button
                 onClick={e => { e.stopPropagation(); onFechaEntrega(); }}

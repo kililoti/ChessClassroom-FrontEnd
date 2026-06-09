@@ -23,6 +23,7 @@ export interface Archivo {
   visible: boolean;
   created_at: string;
   usuarios?: { nombre: string; apellidos: string };
+  metadata_ejercicio?: MetadataEjercicio;
   metadata: {
     es_base_datos: boolean;
     total_partidas: number;
@@ -54,4 +55,13 @@ export function formatFecha(iso: string) {
 
 export function nombreProfesor(u?: { nombre: string; apellidos: string }) {
   return u ? `${u.nombre} ${u.apellidos}` : 'Profesor';
+}
+
+export type EstadoEjercicio = 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
+
+export interface MetadataEjercicio {
+  id_ejercicio?: string;
+  fecha_entrega?: string | null;
+  solucion_pgn?: string | null;
+  estado_alumno?: EstadoEjercicio;
 }
