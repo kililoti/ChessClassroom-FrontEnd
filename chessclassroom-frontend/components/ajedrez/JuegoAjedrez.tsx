@@ -1,4 +1,4 @@
-// Visor de partidas para estudios. Limpio, sin lógica de ejercicios.
+// Visor de partidas para estudios. Limpio, sin lógica de ejercicios
 'use client';
 
 import { useState, useEffect } from 'react';

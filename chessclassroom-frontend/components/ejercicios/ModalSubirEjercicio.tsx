@@ -1,0 +1,245 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { X, Upload, FileText, AlertTriangle, Loader2, ClipboardPaste, Calendar } from 'lucide-react';
+
+const API = 'http://localhost:3001/api/ejercicios';
+
+type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'cálculo';
+
+const CATEGORIA_LABELS: Record<Categoria, { label: string; color: string }> = {
+  apertura:   { label: 'Apertura',   color: 'bg-violet-100 text-violet-700' },
+  tactica:    { label: 'Táctica',    color: 'bg-red-100 text-red-700' },
+  estrategia: { label: 'Estrategia', color: 'bg-blue-100 text-blue-700' },
+  final:      { label: 'Final',      color: 'bg-amber-100 text-amber-700' },
+  partida:    { label: 'Partida',    color: 'bg-emerald-100 text-emerald-700' },
+  'cálculo':  { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
+};
+
+function getToken() {
+  return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
+}
+
+interface Props {
+  carpetaId: string;
+  onClose: () => void;
+  onSubido: () => void;
+}
+
+export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Props) {
+  const [nombre, setNombre]           = useState('');
+  const [categoria, setCategoria]     = useState<Categoria | ''>('');
+  const [archivo, setArchivo]         = useState<File | null>(null);
+  const [textoFenPgn, setTextoFenPgn] = useState('');
+  const [solucionPgn, setSolucionPgn] = useState('');
+  const [fechaEntrega, setFechaEntrega] = useState('');
+  const [comentarioSolucion, setComentarioSolucion] = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const tieneArchivo  = !!archivo;
+  const tieneTexto    = textoFenPgn.trim().length > 0;
+  const hayConflicto  = tieneArchivo && tieneTexto;
+  const puedeSubir    = !hayConflicto && (tieneArchivo || tieneTexto) && !!categoria && !loading;
+
+  const handleSubir = async () => {
+    if (!puedeSubir) return;
+    setLoading(true); setError('');
+    try {
+      const form = new FormData();
+      form.append('carpeta_id', carpetaId);
+      form.append('categoria', categoria as string);
+      if (nombre.trim()) form.append('nombre', nombre.trim());
+      if (solucionPgn.trim()) form.append('solucion_pgn', solucionPgn.trim());
+      
+      if (fechaEntrega) form.append('fecha_entrega', new Date(`${fechaEntrega}T23:59:59`).toISOString());
+      
+      if (comentarioSolucion.trim()) form.append('comentarios_solucion', comentarioSolucion.trim());
+      form.append('visible', 'true');
+
+      if (tieneArchivo && archivo) {
+        form.append('file', archivo);
+      } else {
+        form.append('texto_fen_o_pgn', textoFenPgn.trim());
+      }
+
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Error al subir el ejercicio');
+      onSubido(); onClose();
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const categorias = Object.entries(CATEGORIA_LABELS) as [Categoria, { label: string; color: string }][];
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl my-4" onClick={e => e.stopPropagation()}>
+
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-900">Subir ejercicio</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg mb-4">
+            <AlertTriangle className="w-4 h-4 shrink-0" />{error}
+          </div>
+        )}
+
+        {hayConflicto && (
+          <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>Tienes un archivo seleccionado <strong>y</strong> texto pegado. Usa solo uno de los dos métodos.</span>
+          </div>
+        )}
+
+        <div className="space-y-5">
+
+          {/* Posición inicial archivo */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+              Opción A — Archivo PGN / FEN
+            </label>
+            <div
+              onClick={() => inputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                tieneArchivo ? hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50'
+              }`}
+            >
+              {archivo ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-semibold text-blue-600">{archivo.name}</p>
+                  <button onClick={e => { e.stopPropagation(); setArchivo(null); if (inputRef.current) inputRef.current.value = ''; }} className="ml-1 text-slate-400 hover:text-red-500">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <Upload className="w-6 h-6 text-slate-400" />
+                  <p className="text-sm text-slate-500">Haz clic para seleccionar un archivo <span className="font-semibold">.pgn</span></p>
+                  <p className="text-[11px] text-slate-400">Un PGN con múltiples partidas crea ejercicios múltiples</p>
+                </div>
+              )}
+            </div>
+            <input ref={inputRef} type="file" accept=".pgn,.fen" className="hidden" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">o</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          {/* Posición inicial texto */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+              <ClipboardPaste className="w-3.5 h-3.5" /> Opción B — Pegar FEN o PGN como texto
+            </label>
+            <textarea
+              rows={3}
+              className={`w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-xs font-mono resize-none transition-all ${
+                tieneTexto && hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-slate-300'
+              }`}
+              value={textoFenPgn}
+              onChange={e => setTextoFenPgn(e.target.value)}
+              placeholder={'FEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1\n\no PGN: 1. e4 e5 2. Nf3 ...'}
+            />
+          </div>
+
+          {/* Solución PGN */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+              Solución PGN <span className="text-slate-400 font-normal normal-case">(opcional — se puede añadir después)</span>
+            </label>
+            <textarea
+              rows={3}
+              className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-xs font-mono resize-none"
+              value={solucionPgn}
+              onChange={e => setSolucionPgn(e.target.value)}
+              placeholder="1. Qxh7+ Kxh7 2. Rh3#"
+            />
+          </div>
+
+          {/* Comentario de la solución */}
+          {solucionPgn.trim() && (
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+                Comentario de la solución <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <textarea
+                rows={2}
+                className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm resize-none"
+                value={comentarioSolucion}
+                onChange={e => setComentarioSolucion(e.target.value)}
+                placeholder="Explica la idea principal..."
+              />
+            </div>
+          )}
+
+          {/* Nombre y fecha en la misma fila */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+                Nombre <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <input
+                className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
+                value={nombre} onChange={e => setNombre(e.target.value)}
+                placeholder="Ej: Táctica del alfil"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Fecha de entrega <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              </label>
+              <input
+                type="date"
+                lang="es-ES"
+                className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
+                value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Categoría */}
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+              Categoría <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {categorias.map(([key, { label, color }]) => (
+                <button
+                  key={key} onClick={() => setCategoria(key)}
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left ${
+                    categoria === key ? `${color} border-current` : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+          <button
+            onClick={handleSubir} disabled={!puedeSubir}
+            title={hayConflicto ? 'Usa solo un método de entrada' : !categoria ? 'Selecciona una categoría' : ''}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />} Subir ejercicio
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
