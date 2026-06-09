@@ -16,7 +16,7 @@ export default function EjerciciosPage() {
   const router  = useRouter();
   const claseId = params.id as string;
 
-  const [salaEstudioId, setSalaEstudioId] = useState<string | null>(null);
+  const [salaEjercicioId, setSalaEjercicioId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!claseId) return;
@@ -24,8 +24,8 @@ export default function EjerciciosPage() {
       .then(r => r.json())
       .then(d => {
         const salas: any[] = d.data ?? [];
-        const sala = salas.find(s => s.clase_id === claseId && s.tipo === 'clase_estudio');
-        if (sala) setSalaEstudioId(sala.id);
+        const sala = salas.find(s => s.clase_id === claseId && s.tipo === 'clase_ejercicio');
+        if (sala) setSalaEjercicioId(sala.id);
       })
       .catch(() => {});
   }, [claseId]);
@@ -35,14 +35,14 @@ export default function EjerciciosPage() {
     router.push(`/clases/${claseId}/ejercicios/ejercicio/${archivo.id}`);
   };
 
-  const chatSlot = salaEstudioId ? (
+  const chatSlot = salaEjercicioId ? (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2">
         <span className="text-xl">💬</span>
         <h2 className="font-bold text-slate-800">Chat de Ejercicios</h2>
       </div>
       <div className="h-[500px]">
-        <ChatContainer salaId={salaEstudioId} />
+        <ChatContainer salaId={salaEjercicioId} />
       </div>
     </div>
   ) : undefined;
