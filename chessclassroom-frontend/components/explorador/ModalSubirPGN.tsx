@@ -19,44 +19,73 @@ interface Props {
 export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
   const [nombre, setNombre]       = useState('');
   const [categoria, setCategoria] = useState<Categoria | ''>('');
-  const [archivo, setArchivo]     = useState<File | null>(null);
+  const [archivos, setArchivos]   = useState<File[]>([]);
   const [pgnTexto, setPgnTexto]   = useState('');
   const [loading, setLoading]     = useState(false);
+  const [progreso, setProgreso]   = useState(0);
   const [error, setError]         = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const tieneArchivo = !!archivo;
-  const tieneTexto   = pgnTexto.trim().length > 0;
-  const hayConflicto = tieneArchivo && tieneTexto;
-  const puedeSubir   = !hayConflicto && (tieneArchivo || tieneTexto) && !!categoria && !loading;
+  const tieneArchivos = archivos.length > 0;
+  const tieneTexto    = pgnTexto.trim().length > 0;
+  const hayConflicto  = tieneArchivos && tieneTexto;
+  const puedeSubir    = !hayConflicto && (tieneArchivos || tieneTexto) && !!categoria && !loading;
 
-  const buildFormData = (): FormData => {
-    const form = new FormData();
-    form.append('carpeta_id', carpetaId);
-    form.append('categoria', categoria as string);
-    if (nombre.trim()) form.append('nombre', nombre.trim());
-    form.append('visible', 'true');
-
-    if (tieneArchivo && archivo) {
-      form.append('file', archivo);
-    } else {
-      const blob = new Blob([pgnTexto.trim()], { type: 'application/x-chess-pgn' });
-      form.append('file', blob, (nombre.trim() || 'partida') + '.pgn');
-    }
-    return form;
+  const quitarArchivo = (index: number) => {
+    setArchivos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubir = async () => {
     if (!puedeSubir) return;
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setProgreso(0);
     try {
-      const res = await fetch(`${API}/upload-pgn`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: buildFormData(),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Error al subir el archivo');
+      if (tieneArchivos) {
+        for (let i = 0; i < archivos.length; i++) {
+          const archivo = archivos[i];
+
+          const nombreFinal = nombre.trim()
+            ? archivos.length === 1
+              ? nombre.trim()
+              : `${nombre.trim()} ${i + 1}`
+            : archivo.name.replace(/\.[^/.]+$/, '');
+
+          const form = new FormData();
+          form.append('carpeta_id', carpetaId);
+          form.append('categoria', categoria as string);
+          form.append('nombre', nombreFinal);
+          form.append('visible', 'true');
+          form.append('file', archivo);
+
+          const res = await fetch(`${API}/upload-pgn`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${getToken()}` },
+            body: form,
+          });
+          const d = await res.json();
+          if (!res.ok) throw new Error(`${nombreFinal}: ${d.error || 'Error al subir'}`);
+
+          setProgreso(i + 1);
+        }
+      } else {
+        // Texto PGN: único archivo
+        const form = new FormData();
+        form.append('carpeta_id', carpetaId);
+        form.append('categoria', categoria as string);
+        if (nombre.trim()) form.append('nombre', nombre.trim());
+        form.append('visible', 'true');
+        const blob = new Blob([pgnTexto.trim()], { type: 'application/x-chess-pgn' });
+        form.append('file', blob, (nombre.trim() || 'partida') + '.pgn');
+
+        const res = await fetch(`${API}/upload-pgn`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: form,
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || 'Error al subir el archivo');
+        setProgreso(1);
+      }
+
       onSubido(); onClose();
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -82,35 +111,69 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
         {hayConflicto && (
           <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Tienes un archivo seleccionado <strong>y</strong> texto PGN pegado. Usa solo uno de los dos métodos para poder subir.</span>
+            <span>Tienes archivos seleccionados <strong>y</strong> texto PGN pegado. Usa solo uno de los dos métodos.</span>
           </div>
         )}
 
         <div className="space-y-5">
-          {/* Opción A: Archivo */}
+
+          {/* Opción A: archivos múltiples */}
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">Opción A — Archivo .pgn</label>
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
+              Opción A — Archivo(s) .pgn
+            </label>
             <div
               onClick={() => inputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${tieneArchivo ? hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50'}`}
+              className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                tieneArchivos
+                  ? hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50'
+                  : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50'
+              }`}
             >
-              {archivo ? (
-                <div className="flex items-center justify-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <p className="text-sm font-semibold text-blue-600">{archivo.name}</p>
-                  <button onClick={e => { e.stopPropagation(); setArchivo(null); if (inputRef.current) inputRef.current.value = ''; }} className="ml-1 text-slate-400 hover:text-red-500 transition-colors">
-                    <X className="w-4 h-4" />
+              {tieneArchivos ? (
+                <div className="flex flex-col gap-1.5">
+                  {archivos.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <p className="text-sm font-semibold text-blue-600 truncate">{f.name}</p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); quitarArchivo(i); }}
+                        className="ml-2 text-slate-400 hover:text-red-500 shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+                    className="text-xs text-blue-500 hover:text-blue-700 font-semibold mt-1"
+                  >
+                    + Añadir más archivos
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <Upload className="w-6 h-6 text-slate-400" />
-                  <p className="text-sm text-slate-500">Haz clic para seleccionar un archivo <span className="font-semibold">.pgn</span></p>
+                  <p className="text-sm text-slate-500">
+                    Haz clic para seleccionar <span className="font-semibold">uno o varios archivos .pgn</span>
+                  </p>
                   <p className="text-[11px] text-slate-400">Un PGN con múltiples partidas se registrará como Database automáticamente</p>
                 </div>
               )}
             </div>
-            <input ref={inputRef} type="file" accept=".pgn" className="hidden" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />
+            <input
+              ref={inputRef} type="file" accept=".pgn" multiple className="hidden"
+              onChange={e => {
+                const nuevos = Array.from(e.target.files ?? []);
+                setArchivos(prev => {
+                  const nombresExistentes = new Set(prev.map(f => f.name));
+                  return [...prev, ...nuevos.filter(f => !nombresExistentes.has(f.name))];
+                });
+                e.target.value = '';
+              }}
+            />
           </div>
 
           {/* Separador */}
@@ -120,14 +183,16 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
             <div className="flex-1 h-px bg-slate-200" />
           </div>
 
-          {/* Opción B: Texto */}
+          {/* Opción B: texto */}
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
               <ClipboardPaste className="w-3.5 h-3.5" /> Opción B — Pegar PGN como texto
             </label>
             <textarea
               rows={5}
-              className={`w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-xs font-mono resize-none transition-all ${tieneTexto && hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-slate-300'}`}
+              className={`w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-xs font-mono resize-none transition-all ${
+                tieneTexto && hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-slate-300'
+              }`}
               value={pgnTexto}
               onChange={e => setPgnTexto(e.target.value)}
               placeholder={'[Event "Casual"]\n[White "Kasparov"]\n[Black "Deep Blue"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 ...'}
@@ -137,7 +202,11 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
           {/* Nombre */}
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
-              Nombre <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              Nombre <span className="text-slate-400 font-normal normal-case">
+                {tieneArchivos && archivos.length > 1
+                  ? '(opcional — se usará como base: "nombre 1", "nombre 2"...)'
+                  : '(opcional)'}
+              </span>
             </label>
             <input
               className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
@@ -153,8 +222,10 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {categorias.map(([key, { label, color }]) => (
-                <button key={key} onClick={() => setCategoria(key)}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left ${categoria === key ? `${color} border-current` : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                <button key={key} type="button" onClick={() => setCategoria(key)}
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left ${
+                    categoria === key ? `${color} border-current` : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
                 >
                   {label}
                 </button>
@@ -163,14 +234,28 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
           </div>
         </div>
 
+        {/* Barra de progreso */}
+        {loading && tieneArchivos && archivos.length > 1 && (
+          <div className="mt-4">
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(progreso / archivos.length) * 100}%` }} />
+            </div>
+            <p className="text-xs text-slate-400 mt-1 text-center">{progreso} / {archivos.length} archivos</p>
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
+            Cancelar
+          </button>
           <button
             onClick={handleSubir} disabled={!puedeSubir}
             title={hayConflicto ? 'Elimina el archivo o borra el texto para continuar' : !categoria ? 'Selecciona una categoría' : ''}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />} Subir
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {tieneArchivos && archivos.length > 1 ? `Subir ${archivos.length} archivos` : 'Subir'}
           </button>
         </div>
       </div>
