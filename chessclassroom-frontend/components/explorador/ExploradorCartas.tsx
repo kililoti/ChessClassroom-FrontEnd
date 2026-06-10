@@ -1,7 +1,7 @@
 // TarjetaCarpeta, TarjetaDatabase, FilaPartida y helpers visuales compartidos
 'use client';
 
-import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2, Clock, CheckCircle2, PlayCircle, AlertCircle } from 'lucide-react';
+import { Folder, Database, FileText, Calendar, User, Eye, EyeOff, Tag, Trash2, Clock, CheckCircle2, PlayCircle, AlertCircle, Star } from 'lucide-react';
 import { Carpeta, Archivo, Categoria, CATEGORIA_LABELS, formatFecha, nombreProfesor } from '@/types/explorador';
 
 // Helpers visuales
@@ -102,17 +102,18 @@ export function EstadoEjercicioPill({
 
 export function EstadoAlumnoPill({
   estado,
-  puntuacion,
+  esVencido = false,
 }: {
   estado?: 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
-  puntuacion?: number | null;
+  esVencido?: boolean;
 }) {
   if (!estado) return null;
 
-  if (puntuacion !== null && puntuacion !== undefined) {
+  // Si la fecha de entrega ha pasado y no está completado = "No completado"
+  if (esVencido && estado !== 'COMPLETADO') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
-        ★ Evaluado ({puntuacion}/5)
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100">
+        <AlertCircle className="w-2.5 h-2.5" /> No completado
       </span>
     );
   }
@@ -138,6 +139,14 @@ export function EstadoAlumnoPill({
         </span>
       );
   }
+}
+
+export function EvaluadoTag({ puntuacion }: { puntuacion: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+      <Star className="w-2.5 h-2.5" /> Evaluado {puntuacion}/5
+    </span>
+  );
 }
 
 // Tarjeta Carpeta
@@ -222,12 +231,12 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
 // Fila Partida
 
 export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad, onEliminar, onFechaEntrega, selected, onToggleSelect }: any) {
-  const metaEj = archivo.metadata_ejercicio;
+  const metaEj  = archivo.metadata_ejercicio;
   const partida = archivo.metadata?.partidas?.[0];
 
-  const ahora = new Date();
+  const ahora   = new Date();
   const esVencido = metaEj?.fecha_entrega ? ahora > new Date(metaEj.fecha_entrega) : false;
-  const esFuturo = metaEj?.fecha_inicio  ? ahora < new Date(metaEj.fecha_inicio)  : false;
+  const esFuturo  = metaEj?.fecha_inicio  ? ahora < new Date(metaEj.fecha_inicio)  : false;
 
   const estaBloqueadoParaAlumno = !esProfesor && esFuturo;
 
@@ -247,7 +256,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
       ${estaBloqueadoParaAlumno ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'cursor-pointer hover:shadow-md hover:border-blue-200'}
       ${!archivo.visible ? 'opacity-70' : ''}`}
     >
-      {/* Zona izquierda icono e info */}
+      {/* Zona izquierda: icono e info */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
 
         {/* Checkbox de selección múltiple */}
@@ -287,6 +296,11 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
 
             <CategoriaTag categoria={archivo.categoria} />
 
+            {/* Tag evaluado — justo después de la categoría */}
+            {!esProfesor && metaEj?.puntuacion_alumno !== null && metaEj?.puntuacion_alumno !== undefined && (
+              <EvaluadoTag puntuacion={metaEj.puntuacion_alumno} />
+            )}
+
             {metaEj ? (
               <>
                 <EstadoEjercicioPill
@@ -298,9 +312,9 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
                   <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
                     <Calendar className="w-3 h-3" /> Disponible el: {formatFecha(metaEj.fecha_inicio)}
                   </span>
-                ) : (metaEj.fecha_inicio && metaEj.fecha_entrega) ? (
-                  <span className={`text-[11px] flex items-center gap-1 font-medium px-2 py-0.5 rounded-full ${esVencido ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                    <Clock className="w-3 h-3" /> {esVencido ? 'Vencido' : `Vence: ${formatFecha(metaEj.fecha_entrega)}`}
+                ) : (metaEj.fecha_inicio && metaEj.fecha_entrega && !esVencido) ? (
+                  <span className="text-[11px] flex items-center gap-1 font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                    <Clock className="w-3 h-3" /> Vence: {formatFecha(metaEj.fecha_entrega)}
                   </span>
                 ) : null}
               </>
@@ -315,7 +329,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
         </div>
       </div>
 
-      {/* Zona derecha jugadores, estado del alumno y botones */}
+      {/* Zona derecha: jugadores, estado del alumno y botones */}
       <div className="flex items-center flex-wrap gap-3 shrink-0">
 
         {/* Jugadores siempre que haya partida */}
@@ -338,10 +352,7 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
 
         {/* Estado personal del alumno */}
         {!esProfesor && metaEj && !estaBloqueadoParaAlumno && (
-          <EstadoAlumnoPill
-            estado={metaEj.estado_alumno}
-            puntuacion={metaEj.puntuacion_alumno}
-          />
+          <EstadoAlumnoPill estado={metaEj.estado_alumno} esVencido={esVencido} />
         )}
 
         {/* Botones del profesor */}
