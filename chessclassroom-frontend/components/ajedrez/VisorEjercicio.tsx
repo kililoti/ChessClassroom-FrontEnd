@@ -724,7 +724,7 @@ export default function VisorEjercicio({
           ))}
         </div>
       )}
-
+      
       {/* Panel de respuestas */}
       {esProfesor && tab === 'respuestas' && !grabando && (
         <div className="w-full px-4 pb-6 space-y-3">
@@ -757,7 +757,7 @@ export default function VisorEjercicio({
                 <div 
                   key={r.id}
                   onClick={() => {
-                    if (!pgnCargar) return; // Si no hay PGN, no hace nada
+                    if (r.estado === 'NO_INICIADO' || !pgnCargar) return;
                     cargarPgn(pgnCargar);
                     setTab('tablero');
                     setMostrandoSolucion(false);
@@ -772,42 +772,64 @@ export default function VisorEjercicio({
                     setPuntuacionProfesor(r.puntuacion ?? null);
                     setEvalGuardadaOk(false);
                   }}
-
                   className={`group bg-white border rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                    pgnCargar 
-                      ? 'cursor-pointer hover:border-blue-400 hover:shadow-md border-slate-200' 
-                      : 'border-slate-200 opacity-70 cursor-default'
+                    r.estado === 'NO_INICIADO'
+                      ? 'border-slate-200 opacity-60 cursor-not-allowed'
+                      : pgnCargar 
+                        ? 'cursor-pointer hover:border-blue-400 hover:shadow-md border-slate-200' 
+                        : 'border-slate-200 opacity-70 cursor-default'
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold text-sm transition-colors ${pgnCargar ? 'text-slate-800 group-hover:text-blue-700' : 'text-slate-600'}`}>
+                    <p className={`font-bold text-base transition-colors ${pgnCargar ? 'text-slate-900 group-hover:text-blue-700' : 'text-slate-600'}`}>
                       {r.alumno.nombre} {r.alumno.apellidos}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${cfg.color}`}>
+                    
+                    <div className="flex flex-wrap items-center gap-4 mt-2">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${cfg.color}`}>
                         {cfg.label}
                       </span>
-                      {r.fecha_primer_acceso && (
-                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {tiempo}
-                        </span>
-                      )}
-                      <span className="text-[11px] text-slate-400">
-                        ❌ {r.intentos_fallidos} errores
-                      </span>
-                      {r.puntuacion !== null && (
-                        <span className="text-[11px] font-bold text-blue-600">
-                          📊 {r.puntuacion}/5
-                        </span>
+                      {r.estado !== 'NO_INICIADO' && (
+                        <>
+                          {r.fecha_primer_acceso && (
+                            <span className="text-sm font-semibold text-slate-600 flex items-center gap-1.5">
+                              <Clock className="w-4 h-4 text-slate-400" /> {tiempo}
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold text-slate-600">
+                            ❌ {r.intentos_fallidos} errores
+                          </span>
+                        </>
                       )}
                     </div>
+
                     {r.comentario_alumno && (
-                      <p className="text-xs text-slate-500 mt-1.5 italic">
+                      <p className="text-sm text-slate-600 mt-3 italic border-l-4 border-slate-200 pl-3 break-words whitespace-pre-wrap">
                         "{r.comentario_alumno}"
                       </p>
                     )}
+
+                    {(r.comentario_revision || r.puntuacion !== null) && (
+                      <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="text-[12px] font-bold text-blue-500 uppercase tracking-wide">
+                            Tu revisión
+                          </p>
+                          {r.puntuacion !== null && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 border border-blue-200 rounded-lg">
+                              <span className="text-[15px] font-black text-blue-700 leading-none"> ⭐ {r.puntuacion}</span>
+                              <span className="text-[15px] font-black text-blue-700 leading-none">/ 5</span>
+                            </div>
+                          )}
+                        </div>
+                        {r.comentario_revision && (
+                          <p className="text-sm text-slate-700 italic font-medium break-words whitespace-pre-wrap">
+                            "{r.comentario_revision}"
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  
                 </div>
               );
             })
