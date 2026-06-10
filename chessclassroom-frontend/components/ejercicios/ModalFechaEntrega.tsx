@@ -9,6 +9,11 @@ function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
 }
 
+export interface FechasGrupoPayload {
+  fecha_inicio:  string | null;
+  fecha_entrega: string | null;
+}
+
 interface Props {
   archivoId: string;
   nombreEjercicio: string;
@@ -16,16 +21,21 @@ interface Props {
   fechaEntregaActual?: string | null;
   onClose: () => void;
   onGuardada: () => void;
+  // Props opcionales para modo grupo
+  onGuardarGrupo?: (payload: FechasGrupoPayload) => Promise<void>;
+  progresoGrupo?: { actual: number; total: number };
 }
 
 export default function ModalFechaEntrega({
-  archivoId, nombreEjercicio, fechaInicioActual, fechaEntregaActual, onClose, onGuardada,
+  archivoId, nombreEjercicio,
+  fechaInicioActual, fechaEntregaActual,
+  onClose, onGuardada,
+  onGuardarGrupo, progresoGrupo,
 }: Props) {
-  
+
   const fInicioInicial = fechaInicioActual
     ? new Date(fechaInicioActual).toISOString().slice(0, 10)
     : '';
-    
   const fEntregaInicial = fechaEntregaActual
     ? new Date(fechaEntregaActual).toISOString().slice(0, 10)
     : '';
@@ -36,42 +46,38 @@ export default function ModalFechaEntrega({
   const [error, setError]               = useState('');
 
   const guardar = async () => {
-    setLoading(true); setError('');
-
-    if (fechaInicio && fechaEntrega) {
-      if (new Date(fechaInicio) > new Date(fechaEntrega)) {
-        setError('La fecha de inicio no puede ser posterior a la fecha límite.');
-        setLoading(false);
-        return;
-      }
+    if (fechaInicio && fechaEntrega && new Date(fechaInicio) > new Date(fechaEntrega)) {
+      setError('La fecha de inicio no puede ser posterior a la fecha límite.');
+      return;
     }
-
+    setLoading(true); setError('');
     try {
-      // Formatear para asegurar que la de inicio sea a las 00:00 y la de entrega a las 23:59
-      const fechaIniFormato = fechaInicio ? new Date(`${fechaInicio}T00:00:00`).toISOString() : null;
-      const fechaEntFormato = fechaEntrega ? new Date(`${fechaEntrega}T23:59:59`).toISOString() : null;
+      // 00:00:00 para inicio, 23:59:59 para entrega
+      const payload: FechasGrupoPayload = {
+        fecha_inicio:  fechaInicio  ? new Date(`${fechaInicio}T00:00:00`).toISOString()  : null,
+        fecha_entrega: fechaEntrega ? new Date(`${fechaEntrega}T23:59:59`).toISOString() : null,
+      };
 
-      const res = await fetch(`${API_EJ}/${archivoId}/fechas`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ 
-          fecha_inicio: fechaIniFormato,
-          fecha_entrega: fechaEntFormato 
-        }),
-      });
-      
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error ?? 'Error al guardar las fechas');
-      onGuardada();
-      onClose();
+      if (onGuardarGrupo) {
+        // Modo grupo: delega la llamada al padre (ModalFechasGrupo)
+        await onGuardarGrupo(payload);
+      } else {
+        // Modo individual: llama directamente al endpoint
+        const res = await fetch(`${API_EJ}/${archivoId}/fechas`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? 'Error al guardar las fechas');
+        onGuardada();
+        onClose();
+      }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   };
 
-  const limpiarFechas = () => {
-    setFechaInicio('');
-    setFechaEntrega('');
-  };
+  const esModoGrupo = !!onGuardarGrupo;
 
   return (
     <div
@@ -84,7 +90,8 @@ export default function ModalFechaEntrega({
       >
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-            <CalendarClock className="w-5 h-5 text-blue-600" /> Configurar fechas
+            <CalendarClock className="w-5 h-5 text-blue-600" />
+            {esModoGrupo ? 'Asignar fechas' : 'Configurar fechas'}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
@@ -108,6 +115,9 @@ export default function ModalFechaEntrega({
               value={fechaInicio}
               onChange={e => setFechaInicio(e.target.value)}
             />
+            {fechaInicio && (
+              <p className="text-[11px] text-slate-400 mt-1 ml-1">Disponible desde las 00:00</p>
+            )}
           </div>
 
           <div>
@@ -121,12 +131,30 @@ export default function ModalFechaEntrega({
               value={fechaEntrega}
               onChange={e => setFechaEntrega(e.target.value)}
             />
+            {fechaEntrega && (
+              <p className="text-[11px] text-slate-400 mt-1 ml-1">Vence a las 23:59</p>
+            )}
           </div>
         </div>
 
+        {/* Barra de progreso en modo grupo */}
+        {esModoGrupo && progresoGrupo && loading && (
+          <div className="mb-4">
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(progresoGrupo.actual / progresoGrupo.total) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-400 mt-1 text-center">
+              {progresoGrupo.actual} / {progresoGrupo.total}
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <button
-            onClick={limpiarFechas}
+            onClick={() => { setFechaInicio(''); setFechaEntrega(''); }}
             disabled={!fechaInicio && !fechaEntrega}
             className="px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
           >
