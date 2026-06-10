@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Folder, Plus, Upload, ChevronRight, FileText, Database, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Folder, Plus, Upload, ChevronRight, FileText, Database, ArrowLeft, Loader2, AlertTriangle, Trash2, Calendar, X } from 'lucide-react';
 import { Carpeta, Archivo } from '@/types/explorador';
 import { TarjetaCarpeta, TarjetaDatabase, FilaPartida } from './ExploradorCartas';
 import ModalSubirPGN from './ModalSubirPGN';
 import ModalSubirEjercicio from '@/components/ejercicios/ModalSubirEjercicio';
-import ModalFechaEntrega from '@/components/ejercicios/ModalFechaEntrega';
+import ModalFechaEntrega, { FechasGrupoPayload } from '@/components/ejercicios/ModalFechaEntrega';
 
-const API = 'http://localhost:3001/api/recursos';
+const API     = 'http://localhost:3001/api/recursos';
+const API_EJ  = 'http://localhost:3001/api/ejercicios';
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -17,21 +18,6 @@ function getToken() {
 function getUsuario(): any {
   if (typeof window === 'undefined') return {};
   try { return JSON.parse(localStorage.getItem('usuario') ?? '{}'); } catch { return {}; }
-}
-
-// Tipos de configuración
-
-export interface ExploradorConfig {
-  modulo: string;
-  titulo: string;
-  icono: React.ReactNode;
-  claseId: string;
-  carpetaId?: string;
-  archivoId?: string;
-  basePath: string;
-  onAbrirPartida: (archivo: Archivo, indexPartida?: number) => void;
-  chatSlot?: React.ReactNode;
-  rutaVolver?: string;
 }
 
 // Modal Crear Carpeta
@@ -72,13 +58,72 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
         />
         <div className="flex gap-2 justify-end">
           <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
-          <button onClick={handleCrear} disabled={!nombre.trim() || loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2">
+          <button onClick={handleCrear} disabled={!nombre.trim() || loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />} Crear
           </button>
         </div>
       </div>
     </div>
   );
+}
+
+// Modal Asignar fechas en grupo
+// Reutiliza ModalFechaEntrega, al guardar aplica las mismas fechas a todos los IDs.
+// La lógica de horarios (00:00 inicio / 23:59 entrega) la gestiona ModalFechaEntrega.
+
+function ModalFechasGrupo({ archivoIds, onClose, onGuardado }: {
+  archivoIds: string[];
+  onClose: () => void;
+  onGuardado: () => void;
+}) {
+  const [progreso, setProgreso] = useState(0);
+  const [guardando, setGuardando] = useState(false);
+
+  const handleGuardar = async (payload: FechasGrupoPayload) => {
+    setGuardando(true); setProgreso(0);
+    try {
+      for (const id of archivoIds) {
+        await fetch(`${API_EJ}/${id}/fechas`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify(payload),
+        });
+        setProgreso(p => p + 1);
+      }
+      onGuardado(); onClose();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <ModalFechaEntrega
+      archivoId=""
+      nombreEjercicio={`${archivoIds.length} ejercicio${archivoIds.length !== 1 ? 's' : ''} seleccionado${archivoIds.length !== 1 ? 's' : ''}`}
+      onClose={onClose}
+      onGuardada={onClose}
+      onGuardarGrupo={handleGuardar}
+      progresoGrupo={guardando ? { actual: progreso, total: archivoIds.length } : undefined}
+    />
+  );
+}
+
+// Tipos
+
+export interface ExploradorConfig {
+  modulo: string;
+  titulo: string;
+  icono: React.ReactNode;
+  claseId: string;
+  carpetaId?: string;
+  archivoId?: string;
+  basePath: string;
+  onAbrirPartida: (archivo: Archivo, indexPartida?: number) => void;
+  chatSlot?: React.ReactNode;
+  rutaVolver?: string;
 }
 
 // Componente principal
@@ -90,20 +135,28 @@ export default function ExploradorArchivos({
   const usuario    = getUsuario();
   const esProfesor = usuario?.rol === 'profesor';
 
-  const [carpetas, setCarpetas]   = useState<Carpeta[]>([]);
-  const [archivos, setArchivos]   = useState<Archivo[]>([]);
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; nombre: string }[]>([]);
+  const [carpetas, setCarpetas]         = useState<Carpeta[]>([]);
+  const [archivos, setArchivos]         = useState<Archivo[]>([]);
+  const [breadcrumbs, setBreadcrumbs]   = useState<{ id: string; nombre: string }[]>([]);
   const [databaseActual, setDatabaseActual] = useState<Archivo | null>(null);
-  const [cargando, setCargando]     = useState(true);
-  const [cargandoPgn, setCargandoPgn] = useState(false);
-  const [error, setError]         = useState('');
+  const [cargando, setCargando]         = useState(true);
+  const [cargandoPgn, setCargandoPgn]   = useState(false);
+  const [error, setError]               = useState('');
   const [modalCarpeta, setModalCarpeta] = useState(false);
   const [modalPgn, setModalPgn]         = useState(false);
 
-  // Estado para el modal de fecha de entrega
+  // Selección múltiple
+  const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
+  const [modalFechasGrupo, setModalFechasGrupo] = useState(false);
+  const [eliminandoGrupo, setEliminandoGrupo]   = useState(false);
+
+  // Fecha individual
   const [archivoFechaEntrega, setArchivoFechaEntrega] = useState<Archivo | null>(null);
 
   const estamosEnRaiz = !carpetaId;
+
+  // Limpiar selección al cambiar de carpeta
+  useEffect(() => { setSelectedIds(new Set()); }, [carpetaId]);
 
   useEffect(() => {
     if (!carpetaId) { setBreadcrumbs([]); return; }
@@ -165,6 +218,8 @@ export default function ExploradorArchivos({
     }
   };
 
+  // Acciones individuales
+
   const eliminarCarpeta = async (id: string) => {
     if (!confirm('¿Eliminar esta carpeta y todo su contenido?')) return;
     try {
@@ -195,6 +250,7 @@ export default function ExploradorArchivos({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setArchivos(prev => prev.filter(a => a.id !== id));
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
     } catch (e: any) { setError(e.message); }
   };
 
@@ -229,10 +285,48 @@ export default function ExploradorArchivos({
     setTimeout(() => { onAbrirPartida(database, indexPartida); }, 50);
   };
 
+  // Selección múltiple
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const seleccionarTodos = () => {
+    const idsTodos = partidas.map(a => a.id);
+    const todosSeleccionados = idsTodos.every(id => selectedIds.has(id));
+    if (todosSeleccionados) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(idsTodos));
+    }
+  };
+
+  const eliminarSeleccionados = async () => {
+    const n = selectedIds.size;
+    if (!confirm(`¿Eliminar ${n} archivo${n !== 1 ? 's' : ''} de forma permanente?`)) return;
+    setEliminandoGrupo(true);
+    try {
+      await Promise.all([...selectedIds].map(id =>
+        fetch(`${API}/archivos/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+      ));
+      setArchivos(prev => prev.filter(a => !selectedIds.has(a.id)));
+      setSelectedIds(new Set());
+    } catch (e: any) { setError(e.message); }
+    finally { setEliminandoGrupo(false); }
+  };
+
   const databases = archivos.filter(a => a.metadata?.es_base_datos);
   const partidas  = archivos.filter(a => !a.metadata?.es_base_datos);
   const tieneSeccionSuperior = carpetas.length > 0 || databases.length > 0;
   const tieneContenido       = tieneSeccionSuperior || partidas.length > 0;
+  const todosSeleccionados   = partidas.length > 0 && partidas.every(a => selectedIds.has(a.id));
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 relative">
@@ -248,6 +342,7 @@ export default function ExploradorArchivos({
 
       <div className="max-w-screen-2xl mx-auto">
 
+        {/* Cabecera */}
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0">
@@ -384,9 +479,65 @@ export default function ExploradorArchivos({
 
                     {carpetaId && (
                       <section>
-                        <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                          <FileText className="w-4 h-4 text-blue-500" /> Partidas Individuales
-                        </h2>
+                        {/* Cabecera de sección con checkbox "seleccionar todos" */}
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xs font-bold text-slate-500 flex items-center gap-2 uppercase tracking-widest">
+                            <FileText className="w-4 h-4 text-blue-500" /> Partidas Individuales
+                          </h2>
+                          {esProfesor && partidas.length > 0 && (
+                            <button
+                              onClick={seleccionarTodos}
+                              className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5"
+                            >
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                                todosSeleccionados ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                              }`}>
+                                {todosSeleccionados && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              Seleccionar todos
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Barra de acciones en grupo */}
+                        {esProfesor && selectedIds.size > 0 && (
+                          <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+                            <span className="text-sm font-semibold">
+                              {selectedIds.size} archivo{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {modulo === 'ejercicio' && (
+                                <button
+                                  onClick={() => setModalFechasGrupo(true)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
+                                >
+                                  <Calendar className="w-4 h-4" /> Asignar fechas
+                                </button>
+                              )}
+                              <button
+                                onClick={eliminarSeleccionados}
+                                disabled={eliminandoGrupo}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40"
+                              >
+                                {eliminandoGrupo
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <Trash2 className="w-4 h-4" />}
+                                Eliminar
+                              </button>
+                              <button
+                                onClick={() => setSelectedIds(new Set())}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
+                              >
+                                <X className="w-4 h-4" /> Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {partidas.length > 0 ? (
                           <div className="flex flex-col gap-3">
                             {partidas.map(a => (
@@ -398,6 +549,8 @@ export default function ExploradorArchivos({
                                   ? () => setArchivoFechaEntrega(a)
                                   : undefined
                                 }
+                                selected={selectedIds.has(a.id)}
+                                onToggleSelect={esProfesor ? () => toggleSelect(a.id) : undefined}
                               />
                             ))}
                           </div>
@@ -433,17 +586,22 @@ export default function ExploradorArchivos({
           : <ModalSubirPGN carpetaId={carpetaId} onClose={() => setModalPgn(false)} onSubido={cargarDatos} />
       )}
 
-      {/* Modal fecha de entrega solo módulo ejercicio */}
       {archivoFechaEntrega && (
         <ModalFechaEntrega
           archivoId={archivoFechaEntrega.id}
           nombreEjercicio={archivoFechaEntrega.nombre}
-          
           fechaInicioActual={archivoFechaEntrega.metadata_ejercicio?.fecha_inicio}
           fechaEntregaActual={archivoFechaEntrega.metadata_ejercicio?.fecha_entrega}
-          
           onClose={() => setArchivoFechaEntrega(null)}
           onGuardada={() => { setArchivoFechaEntrega(null); cargarDatos(); }}
+        />
+      )}
+
+      {modalFechasGrupo && (
+        <ModalFechasGrupo
+          archivoIds={[...selectedIds]}
+          onClose={() => setModalFechasGrupo(false)}
+          onGuardado={() => { setModalFechasGrupo(false); setSelectedIds(new Set()); cargarDatos(); }}
         />
       )}
     </div>
