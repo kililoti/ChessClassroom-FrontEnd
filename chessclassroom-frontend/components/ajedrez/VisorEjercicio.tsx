@@ -752,11 +752,35 @@ export default function VisorEjercicio({
               const cfg = ESTADO_CFG[r.estado as keyof typeof ESTADO_CFG] ?? ESTADO_CFG.NO_INICIADO;
               const tiempo = formatTiempo(r.fecha_primer_acceso, r.fecha_completado);
               const pgnCargar = r.pgn_ultimo_movimiento ?? r.pgn_avanzado_correcto;
+              
               return (
-                <div key={r.id}
-                  className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div 
+                  key={r.id}
+                  onClick={() => {
+                    if (!pgnCargar) return; // Si no hay PGN, no hace nada
+                    cargarPgn(pgnCargar);
+                    setTab('tablero');
+                    setMostrandoSolucion(false);
+                    setComentarioVistaAlumno({
+                      respuestaId:       r.id,
+                      nombre:            `${r.alumno.nombre} ${r.alumno.apellidos}`,
+                      comentario:        r.comentario_alumno,
+                      revisionInicial:   r.comentario_revision,
+                      puntuacionInicial: r.puntuacion,
+                    });
+                    setRevisionProfesor(r.comentario_revision ?? '');
+                    setPuntuacionProfesor(r.puntuacion ?? null);
+                    setEvalGuardadaOk(false);
+                  }}
+
+                  className={`group bg-white border rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                    pgnCargar 
+                      ? 'cursor-pointer hover:border-blue-400 hover:shadow-md border-slate-200' 
+                      : 'border-slate-200 opacity-70 cursor-default'
+                  }`}
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 text-sm">
+                    <p className={`font-semibold text-sm transition-colors ${pgnCargar ? 'text-slate-800 group-hover:text-blue-700' : 'text-slate-600'}`}>
                       {r.alumno.nombre} {r.alumno.apellidos}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -773,7 +797,7 @@ export default function VisorEjercicio({
                       </span>
                       {r.puntuacion !== null && (
                         <span className="text-[11px] font-bold text-blue-600">
-                          📊 {r.puntuacion}/10
+                          📊 {r.puntuacion}/5
                         </span>
                       )}
                     </div>
@@ -783,29 +807,7 @@ export default function VisorEjercicio({
                       </p>
                     )}
                   </div>
-
-                  {pgnCargar && (
-                    <button
-                      onClick={() => {
-                        cargarPgn(pgnCargar);
-                        setTab('tablero');
-                        setMostrandoSolucion(false);
-                        setComentarioVistaAlumno({
-                          respuestaId:       r.id,
-                          nombre:            `${r.alumno.nombre} ${r.alumno.apellidos}`,
-                          comentario:        r.comentario_alumno,
-                          revisionInicial:   r.comentario_revision,
-                          puntuacionInicial: r.puntuacion,
-                        });
-                        setRevisionProfesor(r.comentario_revision ?? '');
-                        setPuntuacionProfesor(r.puntuacion ?? null);
-                        setEvalGuardadaOk(false);
-                      }}
-                      className="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Ver posición
-                    </button>
-                  )}
+                  
                 </div>
               );
             })
