@@ -27,7 +27,7 @@ export interface ProgresoAlumno {
   comentario_alumno: string | null;
   puntuacion: number | null;
   comentario_revision: string | null;
-  tiempo_acumulado: number | null;
+  tiempo_acumulado: number | null; // segundos totales con la página abierta
 }
 
 export interface RespuestaAlumno {
@@ -913,6 +913,9 @@ export default function VisorEjercicio({
                   <p className="text-sm font-bold text-slate-700 text-center">
                     {new Date(fechaEntrega).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
+                  <p className="text-xs text-slate-400">
+                    {new Date(fechaEntrega).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
                 </div>
               )}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 flex-1">
@@ -951,35 +954,35 @@ export default function VisorEjercicio({
             />
           </div>
 
-          {/* Planilla */}
-          <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:h-[548px]">
-            <Planilla
-              historialMovimientos={historialMovimientos}
-              indiceVista={indiceVista}
-              setIndiceVista={setIndiceVista}
-              estamosEnElPresente={estamosEnElPresente}
-              irAlInicio={irAlInicio}
-              irAtras={irAtras}
-              irAdelante={irAdelante}
-              irAlFinal={irAlFinal}
-            />
+          {/* Planilla + botón girar tablero */}
+          <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col gap-2">
+            <div className="lg:h-[548px]">
+              <Planilla
+                historialMovimientos={historialMovimientos}
+                indiceVista={indiceVista}
+                setIndiceVista={setIndiceVista}
+                estamosEnElPresente={estamosEnElPresente}
+                irAlInicio={irAlInicio}
+                irAtras={irAtras}
+                irAdelante={irAdelante}
+                irAlFinal={irAlFinal}
+              />
+            </div>
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={() => setOrientacion(o => o === 'white' ? 'black' : 'white')}
+                className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                Girar Tablero
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Girar tablero — debajo de la planilla, encima de la revisión */}
-      <div className="w-full px-4 flex justify-end -mt-8">
-        <button
-          onClick={() => setOrientacion(o => o === 'white' ? 'black' : 'white')}
-          className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
-          Girar Tablero
-        </button>
-      </div>
 
       {/* Revisión del profesor — sección ancha debajo del tablero */}
       {!esProfesor && (progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined || progresoProp?.comentario_revision) && (
@@ -1017,7 +1020,7 @@ export default function VisorEjercicio({
               {progresoProp?.comentario_revision ? (
                 <textarea
                   readOnly
-                  className="flex-1 w-full p-3 bg-white border border-blue-e00 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto min-h-[140px]"
+                  className="flex-1 w-full p-3 bg-white border border-blue-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto min-h-[140px]"
                   value={progresoProp.comentario_revision}
                 />
               ) : (
