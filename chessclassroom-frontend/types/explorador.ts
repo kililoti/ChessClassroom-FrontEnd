@@ -1,6 +1,6 @@
 // Tipos compartidos por todos los componentes del explorador
 
-export type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'cálculo';
+export type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'calculo';
 
 export interface Carpeta {
   id: string;
@@ -44,7 +44,7 @@ export const CATEGORIA_LABELS: Record<Categoria, { label: string; color: string 
   estrategia: { label: 'Estrategia', color: 'bg-blue-100 text-blue-700' },
   final:      { label: 'Final',      color: 'bg-amber-100 text-amber-700' },
   partida:    { label: 'Partida',    color: 'bg-emerald-100 text-emerald-700' },
-  'cálculo':  { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
+  calculo:  { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
 };
 
 export function formatFecha(iso: string) {
