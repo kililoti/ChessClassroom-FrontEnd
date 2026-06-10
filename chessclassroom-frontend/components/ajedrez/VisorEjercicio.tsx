@@ -652,55 +652,71 @@ export default function VisorEjercicio({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-
-          {/* Modo grabación: controles del profesor */}
-          {esProfesor && grabando && (
+          
+          {!comentarioVistaAlumno && (
             <>
-              <button onClick={reiniciarGrabacion}
-                className="flex items-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold hover:bg-amber-200 transition-colors"
-                title="Volver a la posición inicial del problema">
-                <RotateCcw className="w-4 h-4" /> Reiniciar
-              </button>
-              <button onClick={guardarSolucion} disabled={!pgn.trim() || guardandoSol}
-                className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition-colors">
-                {guardandoSol ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {guardandoSol ? 'Guardando...' : 'Guardar solución'}
-              </button>
-              <button onClick={cancelarGrabacion}
-                className="flex items-center gap-2 px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors">
-                <X className="w-4 h-4" /> Cancelar
-              </button>
+              {/* Modo grabación: controles del profesor */}
+              {esProfesor && grabando && (
+                <>
+                  <button onClick={reiniciarGrabacion}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold hover:bg-amber-200 transition-colors"
+                    title="Volver a la posición inicial del problema">
+                    <RotateCcw className="w-4 h-4" /> Reiniciar
+                  </button>
+                  <button onClick={guardarSolucion} disabled={!pgn.trim() || guardandoSol}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition-colors">
+                    {guardandoSol ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {guardandoSol ? 'Guardando...' : 'Guardar solución'}
+                  </button>
+                  <button onClick={cancelarGrabacion}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors">
+                    <X className="w-4 h-4" /> Cancelar
+                  </button>
+                </>
+              )}
+
+              {/* Modo normal: botón grabar + estado */}
+              {esProfesor && !grabando && (
+                <>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                    tieneSolucion ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                  }`}>
+                    {tieneSolucion ? '✓ Solución grabada' : '⚠ Sin solución'}
+                  </span>
+                  <button onClick={iniciarGrabacion}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-full text-sm font-semibold transition-colors">
+                    <Video className="w-4 h-4" />
+                    {tieneSolucion ? 'Regrabar solución' : 'Grabar solución'}
+                  </button>
+                </>
+              )}
+
+              {/* Ver / Ocultar solución */}
+              {puedeVerSolucion && tieneSolucion && !grabando && (
+                <button onClick={toggleSolucion}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                    mostrandoSolucion
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  }`}>
+                  {mostrandoSolucion ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {mostrandoSolucion ? 'Ocultar solución' : 'Ver solución'}
+                </button>
+              )}
             </>
           )}
 
-          {/* Modo normal: botón grabar + estado */}
-          {esProfesor && !grabando && (
-            <>
-              <button onClick={iniciarGrabacion}
-                className="flex items-center gap-2 px-4 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-full text-sm font-semibold transition-colors">
-                <Video className="w-4 h-4" />
-                {tieneSolucion ? 'Regrabar solución' : 'Grabar solución'}
-              </button>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                tieneSolucion ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-              }`}>
-                {tieneSolucion ? '✓ Solución grabada' : '⚠ Sin solución'}
-              </span>
-            </>
-          )}
-
-          {/* Ver / Ocultar solución */}
-          {puedeVerSolucion && tieneSolucion && !grabando && (
-            <button onClick={toggleSolucion}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-                mostrandoSolucion
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              }`}>
-              {mostrandoSolucion ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {mostrandoSolucion ? 'Ocultar solución' : 'Ver solución'}
+          {comentarioVistaAlumno && tab === 'tablero' && (
+            <button 
+              onClick={() => { 
+               cargarPgn(pgnInicial); 
+               setComentarioVistaAlumno(null); 
+              }}
+              className="flex items-center gap-2 px-4 py-1.5 bg-slate-800 text-white rounded-full text-sm font-semibold hover:bg-slate-900 transition-colors"
+              >
+              <X className="w-4 h-4" /> Salir de revisión
             </button>
-          )}
+    )}
         </div>
       </div>
 
@@ -875,15 +891,8 @@ export default function VisorEjercicio({
             {/* Cabecera con nombre y botón cerrar */}
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                Evaluación
+                Revisión
               </label>
-              <button
-                onClick={() => { cargarPgn(pgnInicial); setComentarioVistaAlumno(null); }}
-                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                title="Volver a la posición inicial"
-              >
-                ✕ Cerrar
-              </button>
             </div>
             <div className="px-3 py-2 bg-slate-100 rounded-xl">
               <p className="text-sm font-semibold text-slate-700">{comentarioVistaAlumno.nombre}</p>
