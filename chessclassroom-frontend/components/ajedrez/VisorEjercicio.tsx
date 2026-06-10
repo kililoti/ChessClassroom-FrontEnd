@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Video, Save, X, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, CSSProperties } from 'react';
+import { ArrowLeft, Video, Save, X, Loader2, Eye, EyeOff, RotateCcw, CheckCircle, Clock, Users, RefreshCw } from 'lucide-react';
 import { useChessGame } from '@/hooks/useChessGame';
+import type { PromotionPiece } from '@/hooks/useChessGame';
 import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
@@ -14,152 +15,415 @@ function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
 }
 
+// Tipos
+
+export interface ProgresoAlumno {
+  id: string;
+  estado: 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
+  pgn_avanzado_correcto: string | null;
+  intentos_fallidos: number;
+  fecha_primer_acceso: string | null;
+  fecha_completado: string | null;
+  comentario_alumno: string | null;
+  puntuacion: number | null;
+  comentario_revision: string | null;
+}
+
+export interface RespuestaAlumno {
+  id: string;
+  alumno: { nombre: string; apellidos: string };
+  estado: 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
+  intentos_fallidos: number;
+  fecha_primer_acceso: string | null;
+  fecha_completado: string | null;
+  pgn_avanzado_correcto: string | null;
+  pgn_ultimo_movimiento: string | null;
+  comentario_alumno: string | null;
+  puntuacion: number | null;
+  comentario_revision: string | null;
+}
+
 export interface VisorEjercicioProps {
   ejercicioId: string;
   esProfesor: boolean;
   pgnInicial?: string;
+  // PGN base del ejercicio sin progreso del alumno.
+  // Se usa para calcular el color del alumno (turno al final del setup).
+  pgnBase?: string;
   solucionPgn?: string;
   comentarioSolucion?: string;
   fechaEntrega?: string | null;
+  progreso?: ProgresoAlumno;
   onClose?: () => void;
 }
+
+// Componente
 
 export default function VisorEjercicio({
   ejercicioId,
   esProfesor,
   pgnInicial = '',
+  pgnBase = '',
   solucionPgn: solucionPgnProp = '',
   comentarioSolucion: comentarioSolucionProp = '',
   fechaEntrega = null,
+  progreso: progresoProp,
   onClose,
 }: VisorEjercicioProps) {
 
-  const [orientacion, setOrientacion]       = useState<'white' | 'black'>('white');
-  const [grabando, setGrabando]             = useState(false);
-  const [guardandoSol, setGuardandoSol]     = useState(false);
-  
-  const [tieneSolucion, setTieneSolucion]   = useState(!!solucionPgnProp);
-  const [solucionPgn, setSolucionPgn]       = useState(solucionPgnProp);
+  // Estado común
+  const [orientacion, setOrientacion]   = useState<'white' | 'black'>('white');
+  const [grabando, setGrabando]         = useState(false);
+  const [tab, setTab]                   = useState<'tablero' | 'respuestas'>('tablero');
+  const [respuestas, setRespuestas]     = useState<RespuestaAlumno[]>([]);
+  const [cargandoResp, setCargandoResp] = useState(false);
+  // Datos del alumno cuya posición está cargada en el tablero
+  const [comentarioVistaAlumno, setComentarioVistaAlumno] = useState<{
+    respuestaId: string;
+    nombre: string;
+    comentario: string | null;
+    revisionInicial: string | null;
+    puntuacionInicial: number | null;
+  } | null>(null);
+  const [revisionProfesor, setRevisionProfesor]     = useState('');
+  const [puntuacionProfesor, setPuntuacionProfesor] = useState<number | null>(null);
+  const [guardandoEval, setGuardandoEval]           = useState(false);
+  const [evalGuardadaOk, setEvalGuardadaOk]         = useState(false);
+  const [guardandoSol, setGuardandoSol] = useState(false);
+
+  const [tieneSolucion, setTieneSolucion]       = useState(!!solucionPgnProp);
+  const [solucionPgn, setSolucionPgn]           = useState(solucionPgnProp);
   const [comentarioSolucion, setComentarioSolucion] = useState(comentarioSolucionProp);
-  
   const [comentarioGuardado, setComentarioGuardado] = useState(comentarioSolucionProp);
-  
   const [mostrandoSolucion, setMostrandoSolucion]   = useState(false);
 
-  // El alumno solo puede ver la solución una vez pasada la fecha de entrega.
-  // El profesor siempre puede verla.
+  // Estado del alumno
+  // completado e intentosFallidos se inicializan desde el progreso recibido
+  // para que el alumno retome exactamente donde lo dejó.
+  const [completado, setCompletado]           = useState(progresoProp?.estado === 'COMPLETADO');
+  const [intentosFallidos, setIntentosFallidos] = useState(progresoProp?.intentos_fallidos ?? 0);
+  // Solo se muestra cuando el alumno completa el ejercicio EN ESTA sesión,
+  // no al volver a abrir un ejercicio ya completado anteriormente.
+  const [bannerCompletado, setBannerCompletado] = useState(false);
+  const [comentarioAlumno, setComentarioAlumno]     = useState(progresoProp?.comentario_alumno ?? '');
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [comentarioGuardadoOk, setComentarioGuardadoOk] = useState(false);
+  // flashStyles se mezcla con estilosCombinados del hook para mostrar
+  // el destello verde/rojo sin interferir con los estilos base del tablero.
+  const [flashStyles, setFlashStyles]         = useState<Record<string, CSSProperties>>({});
+  // Promoción independiente para el alumno (el hook gestiona la del profesor en modo grabación).
+  const [pendingPromStudent, setPendingPromStudent] = useState<{
+    from: string; to: string; color: 'w' | 'b';
+  } | null>(null);
+
+  // Refs
+  // solucionMovs: array de SANs de la solución, precalculado al montar.
+  // El índice correcto es gameActual.history().length porque pgn_avanzado_correcto
+  // ya incluye los movimientos de setup del ejercicio + los del alumno.
+  const solucionMovs  = useRef<string[]>([]);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Permisos
+  // Evaluado: el profesor ya ha puesto puntuación en la respuesta del alumno
+  const evaluado = !esProfesor &&
+    progresoProp?.puntuacion !== null &&
+    progresoProp?.puntuacion !== undefined;
+
   const puedeVerSolucion = esProfesor ||
     (fechaEntrega ? new Date() > new Date(fechaEntrega) : false);
 
+  // Hook de ajedrez
+  // pgnInicial llega desde la página ya como pgn_avanzado_correcto,
+  // así que el tablero carga directamente en el checkpoint del alumno.
   const {
     pgn, fenVisible, estilosCombinados,
     indiceVista, setIndiceVista,
     totalMoves, estamosEnElPresente,
     historialMovimientos, gameActual,
     pendingPromotion,
-    orientacionInicial,
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
     cargarPgn,
   } = useChessGame({ pgnInicial });
 
+  // Orientación: color que mueve al final del pgnBase (= turno del alumno).
+  // Usar pgnBase (sin progreso) evita que un ejercicio completado cambie la orientación.
   useEffect(() => {
-    setOrientacion(orientacionInicial);
-  }, [orientacionInicial]);
+    if (!pgnBase) return;
+    const g = new Chess();
+    try { g.loadPgn(pgnBase); } catch {
+      try { g.load(pgnBase); } catch { return; }
+    }
+    setOrientacion(g.turn() === 'w' ? 'white' : 'black');
+  }, [pgnBase]);
 
-  // Iniciar grabación
+  // Parsear movimientos de la solución una vez al montar o cuando cambia solucionPgn
+  useEffect(() => {
+    if (!solucionPgn) { solucionMovs.current = []; return; }
+    const g = new Chess();
+    try { g.loadPgn(solucionPgn); solucionMovs.current = g.history(); } catch {}
+  }, [solucionPgn]);
+
+  // Fetch de respuestas: al montar si es profesor, y cada vez que abre la pestaña
+  const fetchRespuestas = () => {
+    if (!esProfesor) return;
+    setCargandoResp(true);
+    fetch(`${API}/${ejercicioId}/respuestas`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) setRespuestas(d.respuestas); })
+      .finally(() => setCargandoResp(false));
+  };
+
+  useEffect(() => {
+    fetchRespuestas();
+  }, [ejercicioId, esProfesor]);
+
+  useEffect(() => {
+    if (tab === 'respuestas') fetchRespuestas();
+  }, [tab]);
+
+  // Timer del alumno
+  // Si el ejercicio ya estaba completado al montar, calcula el tiempo final
+  // entre fecha_primer_acceso y fecha_completado para mostrarlo fijo.
+  // Si no está completado, arrancar desde fecha_primer_acceso hasta ahora.
+  // El timer se detiene cuando: completado, o cuando ha pasado la fecha de entrega.
+  const timerDetenido = completado ||
+    (fechaEntrega ? new Date() > new Date(fechaEntrega) : false);
+
+  const calcularSegundosIniciales = () => {
+    const primerAcceso = progresoProp?.fecha_primer_acceso;
+    if (!primerAcceso) return 0;
+    // Tope del timer: fecha_completado, o fecha_entrega si venció, o ahora
+    const fin = progresoProp?.fecha_completado
+      ? new Date(progresoProp.fecha_completado).getTime()
+      : fechaEntrega && new Date() > new Date(fechaEntrega)
+        ? new Date(fechaEntrega).getTime()
+        : Date.now();
+    return Math.floor((fin - new Date(primerAcceso).getTime()) / 1000);
+  };
+
+  const [timerSegundos, setTimerSegundos] = useState(calcularSegundosIniciales);
+  useEffect(() => {
+    const primerAcceso = progresoProp?.fecha_primer_acceso;
+    if (!primerAcceso || timerDetenido) return;
+    const tick = () =>
+      setTimerSegundos(Math.floor((Date.now() - new Date(primerAcceso).getTime()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [progresoProp?.fecha_primer_acceso, timerDetenido]);
+
+  const timerStr = (() => {
+    const h = String(Math.floor(timerSegundos / 3600)).padStart(2, '0');
+    const m = String(Math.floor((timerSegundos % 3600) / 60)).padStart(2, '0');
+    const s = String(timerSegundos % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  })();
+
+  // Sonido
+  const reproducirSonido = (tipo: 'move' | 'capture') => {
+    try { new Audio(`/sounds/${tipo}.mp3`).play().catch(() => {}); } catch {}
+  };
+
+  // Lógica del alumno
+  // Aplica un movimiento del alumno, valida contra la solución y sincroniza con el servidor.
+  // Retorna true si el movimiento es correcto (la pieza se queda) o false (vuelve atrás).
+  const ejecutarMovAlumno = (from: string, to: string, promotion: PromotionPiece = 'q'): boolean => {
+    // Reconstruir el juego en el estado actual del tablero para obtener el PGN completo
+    const tempGame = new Chess();
+    try {
+      if (pgn.trim()) tempGame.loadPgn(pgn);
+    } catch { return false; }
+
+    const move = tempGame.move({ from, to, promotion });
+    if (!move) return false;
+
+    // El índice es la longitud del historial ANTES del movimiento.
+    // Como pgn ya incluye el setup + progreso del alumno, el índice
+    // apunta directamente al movimiento esperado en la solución completa.
+    const indice     = gameActual.history().length;
+    const esperado   = solucionMovs.current[indice];
+    const esCorrecto = move.san === esperado;
+    const esFinal    = esCorrecto && indice + 1 === solucionMovs.current.length;
+
+    // Destello visual (verde correcto / rojo incorrecto)
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    const color = esCorrecto ? 'rgba(34,197,94,0.45)' : 'rgba(239,68,68,0.45)';
+    setFlashStyles({ [from]: { backgroundColor: color }, [to]: { backgroundColor: color } });
+    flashTimerRef.current = setTimeout(() => setFlashStyles({}), 700);
+
+    if (esCorrecto) {
+      // Cargar el nuevo PGN (checkpoint actualizado) en el hook
+      cargarPgn(tempGame.pgn());
+      reproducirSonido(move.captured ? 'capture' : 'move');
+
+      if (esFinal) {
+        setCompletado(true);
+        setBannerCompletado(true);
+      } else {
+        // Respuesta automática del rival: el siguiente movimiento de la solución
+        // pertenece al otro color → lo ejecutamos después de una pequeña pausa
+        // para que el alumno perciba el movimiento del tablero antes de la respuesta.
+        const indiceRival  = indice + 1;
+        const sanRival     = solucionMovs.current[indiceRival];
+        if (sanRival) {
+          setTimeout(() => {
+            const rivalGame = new Chess();
+            try { rivalGame.loadPgn(tempGame.pgn()); } catch { return; }
+            const rivalMove = rivalGame.move(sanRival);
+            if (!rivalMove) return;
+
+            // Comprobar si el movimiento del rival es el último de la solución
+            const rivalEsFinal = indiceRival + 1 === solucionMovs.current.length;
+
+            cargarPgn(rivalGame.pgn());
+            reproducirSonido(rivalMove.captured ? 'capture' : 'move');
+
+            if (rivalEsFinal) {
+              setCompletado(true);
+              setBannerCompletado(true);
+            }
+
+            // Sincronizar el movimiento del rival en el servidor
+            fetch(`${API}/${ejercicioId}/movimiento`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+              body: JSON.stringify({
+                es_correcto:     true,
+                pgn_actualizado: rivalGame.pgn(),
+                es_final:        rivalEsFinal,
+              }),
+            }).catch(() => {});
+          }, 400);
+        }
+      }
+    } else {
+      // La pieza volverá atrás (onPieceDrop devuelve false)
+      setIntentosFallidos(prev => prev + 1);
+    }
+
+    // Sincronizar con el servidor en segundo plano
+    fetch(`${API}/${ejercicioId}/movimiento`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({
+        es_correcto:      esCorrecto,
+        pgn_actualizado:  tempGame.pgn(),
+        es_final:         esFinal,
+      }),
+    }).catch(() => {});
+
+    return esCorrecto;
+  };
+
+  // Handler de drop para el alumno: valida legalidad, detecta promoción y delega la validación.
+  const onPieceDropAlumno = useCallback(({ sourceSquare, targetSquare }: {
+    piece: any; sourceSquare: string; targetSquare: string | null;
+  }): boolean => {
+    if (!targetSquare || completado || !estamosEnElPresente) return false;
+
+    // Verificar legalidad del movimiento
+    const movLegales = gameActual.moves({ verbose: true }) as any[];
+    const esLegal = movLegales.some((m: any) => m.from === sourceSquare && m.to === targetSquare);
+    if (!esLegal) return false;
+
+    // Detectar promoción (solo si el movimiento es legal para no abrir el modal por error)
+    const pieza = gameActual.get(sourceSquare as any);
+    const esPromocion = pieza?.type === 'p' &&
+      ((pieza.color === 'w' && targetSquare[1] === '8') ||
+       (pieza.color === 'b' && targetSquare[1] === '1'));
+
+    if (esPromocion) {
+      setPendingPromStudent({ from: sourceSquare, to: targetSquare, color: pieza!.color as 'w' | 'b' });
+      return false; // la pieza vuelve; el modal decide la pieza de promoción
+    }
+
+    return ejecutarMovAlumno(sourceSquare, targetSquare);
+  // pgn y gameActual deben estar en deps para que el callback recapture
+  // ejecutarMovAlumno con los valores más recientes tras cada movimiento.
+  }, [completado, estamosEnElPresente, gameActual, pgn]);
+
+  // Cuando el alumno elige la pieza de promoción en el modal
+  const handlePromotionSelectAlumno = (piece: PromotionPiece) => {
+    if (!pendingPromStudent) return;
+    ejecutarMovAlumno(pendingPromStudent.from, pendingPromStudent.to, piece);
+    setPendingPromStudent(null);
+  };
+
+  // Lógica del profesor
+
   const iniciarGrabacion = () => {
     cargarPgn(pgnInicial);
     setGrabando(true);
     setMostrandoSolucion(false);
+    setTab('tablero');
+    setComentarioVistaAlumno(null);
   };
 
-  // Cancelar grabación
   const cancelarGrabacion = () => {
     cargarPgn(pgnInicial);
     setGrabando(false);
+    setComentarioVistaAlumno(null);
   };
 
-  // Reiniciar grabación sin salir del modo
-  const reiniciarGrabacion = () => {
-    cargarPgn(pgnInicial);
-  };
+  const reiniciarGrabacion = () => cargarPgn(pgnInicial);
 
-  // Guardar solución
   const guardarSolucion = async () => {
     if (!pgn.trim()) return;
     setGuardandoSol(true);
-    
     try {
-      const gameOriginal = new Chess();
+      const gameOriginal  = new Chess();
+      const gamePropuesto = new Chess();
       let originalCargado = false;
+      let propuestoCargado = false;
+
       try { gameOriginal.loadPgn(pgnInicial.trim()); originalCargado = true; } catch {
         try { gameOriginal.load(pgnInicial.trim()); originalCargado = true; } catch {}
       }
-
-      const gamePropuesto = new Chess();
-      let propuestoCargado = false;
       try { gamePropuesto.loadPgn(pgn.trim()); propuestoCargado = true; } catch {}
 
       if (originalCargado && propuestoCargado) {
-        // CHECK FEN base intacto
         const fenOrig = gameOriginal.header()['FEN'] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
         const fenProp = gamePropuesto.header()['FEN'] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-        
+
         if (fenOrig.trim() !== fenProp.trim()) {
-          alert('❌ Error de Integridad: La solución no arranca desde la posición inicial del ejercicio. Parece que usaste la planilla para retroceder y borraste la configuración base del problema.');
-          setGuardandoSol(false);
+          alert('❌ Error de Integridad: La solución no arranca desde la posición inicial del ejercicio.');
           return;
         }
 
-        // CHECK Movimientos previos intactos
         const histOrig = gameOriginal.history();
         const histProp = gamePropuesto.history();
 
         if (histProp.length < histOrig.length) {
-          alert('❌ Error: La solución contiene menos movimientos que los pasos iniciales obligatorios del ejercicio.');
-          setGuardandoSol(false);
+          alert('❌ Error: La solución contiene menos movimientos que los pasos iniciales obligatorios.');
           return;
         }
-
         for (let i = 0; i < histOrig.length; i++) {
           if (histProp[i] !== histOrig[i]) {
-            alert(`❌ Error: El movimiento inicial número ${i + 1} (${histProp[i]}) ha sido alterado. Debe ser (${histOrig[i]}). No puedes modificar las jugadas que configuran el problema.`);
-            setGuardandoSol(false);
+            alert(`❌ Error: El movimiento inicial número ${i + 1} ha sido alterado.`);
             return;
           }
         }
-
-        // CHECK Solución nueva real
         if (histProp.length === histOrig.length) {
-          alert('⚠ Atención: No has añadido ninguna jugada nueva. Mueve las piezas en el tablero para registrar la solución del ejercicio antes de guardar.');
-          setGuardandoSol(false);
+          alert('⚠ No has añadido ninguna jugada nueva. Mueve piezas para registrar la solución.');
           return;
         }
-
-        // CHECK Solucion nueva diferente a la registrada
         if (tieneSolucion) {
           const gameYaGuardado = new Chess();
           try { gameYaGuardado.loadPgn(solucionPgn); } catch {}
-          
-          // Extraemos la secuencia de jugadas (ej: "e4 e5 Nf3") para ignorar cabeceras y metadatos
-          const secuenciaYaGuardada = gameYaGuardado.history().join(' ');
-          const secuenciaPropuesta = gamePropuesto.history().join(' ');
-
           const mismoComentario = comentarioSolucion.trim() === comentarioGuardado.trim();
-          
-          if (secuenciaYaGuardada === secuenciaPropuesta && mismoComentario) {
-            alert('ℹ No hay cambios. Las jugadas y el comentario son idénticos a los que ya están guardados en la base de datos.');
+          if (gameYaGuardado.history().join(' ') === gamePropuesto.history().join(' ') && mismoComentario) {
+            alert('ℹ No hay cambios respecto a la solución ya guardada.');
             setGrabando(false);
             cargarPgn(pgnInicial);
-            setGuardandoSol(false);
             return;
           }
         }
       }
 
-      // Si hay cambios reales, hacer fetch
       const res = await fetch(`${API}/${ejercicioId}/solucion`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
@@ -170,22 +434,20 @@ export default function VisorEjercicio({
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? 'Error al guardar');
-      
+
       setSolucionPgn(pgn.trim());
       setComentarioGuardado(comentarioSolucion.trim());
-      
       setTieneSolucion(true);
       setGrabando(false);
       cargarPgn(pgnInicial);
 
       if (d.regrabado) {
-        alert('🔄 Solución modificada con éxito.\nEl progreso anterior de los alumnos ha sido borrado y se les ha reasignado el nuevo ejercicio desde cero.');
+        alert('🔄 Solución modificada. El progreso anterior de los alumnos ha sido borrado.');
       } else if (fechaEntrega) {
-        alert('✅ Solución guardada.\nAl tener una fecha límite establecida, el ejercicio ha sido asignado automáticamente a todos los alumnos.');
+        alert('✅ Solución guardada. El ejercicio ha sido asignado automáticamente a los alumnos.');
       } else {
-        alert('✅ Solución guardada.\nRecuerda establecer una "Fecha de Entrega" desde el explorador para que el ejercicio se asigne automáticamente.');
+        alert('✅ Solución guardada. Establece una "Fecha de Entrega" para asignarla automáticamente.');
       }
-
     } catch (e: any) {
       alert(e.message);
     } finally {
@@ -193,7 +455,27 @@ export default function VisorEjercicio({
     }
   };
 
-  // Mostrar / ocultar solución
+  const guardarComentarioAlumno = async () => {
+    if (!comentarioAlumno.trim()) return;
+    setEnviandoComentario(true);
+    setComentarioGuardadoOk(false);
+    try {
+      const res = await fetch(`${API}/${ejercicioId}/comentario-alumno`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ comentario: comentarioAlumno.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? 'Error al guardar');
+      setComentarioGuardadoOk(true);
+      setTimeout(() => setComentarioGuardadoOk(false), 3000);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setEnviandoComentario(false);
+    }
+  };
+
   const toggleSolucion = () => {
     if (mostrandoSolucion) {
       cargarPgn(pgnInicial);
@@ -204,9 +486,63 @@ export default function VisorEjercicio({
     }
   };
 
+  // Derivados
+  // Los flashStyles se superponen a los estilos del hook (últimas casillas, jaque, dots)
+  const estilosMerged = { ...estilosCombinados, ...flashStyles };
+
+  // El alumno puede arrastrar solo cuando está en el presente (no navegando el historial),
+  // no ha completado el ejercicio y no está viendo la solución.
+  const puedeArrastrar =
+    grabando ||
+    (!esProfesor && !completado && !mostrandoSolucion && estamosEnElPresente);
+
+  // Guardar evaluación del profesor
+  const guardarEvaluacion = async () => {
+    if (!comentarioVistaAlumno) return;
+    setGuardandoEval(true);
+    setEvalGuardadaOk(false);
+    try {
+      const res = await fetch(`${API}/respuestas/${comentarioVistaAlumno.respuestaId}/evaluar`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          puntuacion: puntuacionProfesor,
+          comentario: revisionProfesor.trim() || null,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? 'Error al guardar');
+      setEvalGuardadaOk(true);
+      setTimeout(() => setEvalGuardadaOk(false), 3000);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setGuardandoEval(false);
+    }
+  };
+
+  // Helper para formatear tiempos en las respuestas
+  const formatTiempo = (inicio: string | null, fin: string | null) => {
+    if (!inicio) return '—';
+    const ms = (fin ? new Date(fin) : new Date()).getTime() - new Date(inicio).getTime();
+    const h  = Math.floor(ms / 3600000);
+    const m  = Math.floor((ms % 3600000) / 60000);
+    const s  = Math.floor((ms % 60000) / 1000);
+    if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+
+  const ESTADO_CFG = {
+    COMPLETADO:  { label: 'Completado',  color: 'bg-green-100 text-green-700' },
+    EN_PROGRESO: { label: 'En progreso', color: 'bg-amber-100 text-amber-700' },
+    NO_INICIADO: { label: 'Sin iniciar', color: 'bg-slate-100 text-slate-500' },
+  } as const;
+
+  // Render
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
 
+      {/* Modales de promoción — profesor (grabación) y alumno son independientes */}
       {pendingPromotion && (
         <PromotionModal
           color={pendingPromotion.color}
@@ -214,8 +550,64 @@ export default function VisorEjercicio({
           onCancel={handlePromotionCancel}
         />
       )}
+      {pendingPromStudent && (
+        <PromotionModal
+          color={pendingPromStudent.color}
+          onSelect={handlePromotionSelectAlumno}
+          onCancel={() => setPendingPromStudent(null)}
+        />
+      )}
 
-      {/* Cabecera */}
+      {/* Banner de ejercicio completado */}
+      {bannerCompletado && (
+        <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-5">
+
+            {/* Icono */}
+            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+
+            {/* Título */}
+            <div>
+              <h3 className="text-2xl font-extrabold text-slate-900">¡Ejercicio completado!</h3>
+              <p className="text-slate-500 text-sm mt-1">Has encontrado la solución correcta.</p>
+            </div>
+
+            {/* Stats */}
+            <div className="w-full flex gap-3">
+              <div className="flex-1 bg-slate-50 rounded-xl py-3 px-4 text-center">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Tiempo</p>
+                <p className="text-lg font-black text-slate-800 font-mono">{timerStr}</p>
+              </div>
+              <div className="flex-1 bg-slate-50 rounded-xl py-3 px-4 text-center">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Errores</p>
+                <p className="text-lg font-black text-slate-800">{intentosFallidos}</p>
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="w-full flex flex-col gap-2">
+              {puedeVerSolucion && tieneSolucion && (
+                <button
+                  onClick={() => { setBannerCompletado(false); toggleSolucion(); }}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors"
+                >
+                  Ver solución del profesor
+                </button>
+              )}
+              <button
+                onClick={() => setBannerCompletado(false)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors"
+              >
+                Revisar mis movimientos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cabecera*/}
       <div className="w-full flex justify-between items-center mb-6 mt-4 px-4 flex-wrap gap-3">
         <div className="flex items-center gap-4">
           {onClose && (
@@ -223,79 +615,88 @@ export default function VisorEjercicio({
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-            Ejercicio
-            {grabando && (
-              <span className="text-sm font-semibold text-red-600 animate-pulse">
-                ● Grabando solución
-              </span>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+              Ejercicio
+              {grabando && (
+                <span className="text-sm font-semibold text-red-600 animate-pulse">
+                  ● Grabando solución
+                </span>
+              )}
+            </h2>
+
+            {/* Información de progreso del alumno */}
+            {!esProfesor && progresoProp?.fecha_primer_acceso && (
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                <span className="text-sm text-slate-500 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" /> {timerStr}
+                </span>
+                <span className="text-xs text-slate-400">❌ {intentosFallidos} errores</span>
+                {evaluado ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                    ★ Evaluado
+                  </span>
+                ) : completado ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                    <CheckCircle className="w-3 h-3" /> Completado
+                  </span>
+                ) : null}
+                {fechaEntrega && (
+                  <span className="text-xs text-slate-400">
+                    Entrega: {new Date(fechaEntrega).toLocaleDateString('es-ES')}
+                  </span>
+                )}
+              </div>
             )}
-          </h2>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
 
-          {/* Modo grabación: Reiniciar + Guardar + Cancelar */}
+          {/* Modo grabación: controles del profesor */}
           {esProfesor && grabando && (
             <>
-              <button
-                onClick={reiniciarGrabacion}
-                title="Volver a la posición inicial del problema"
+              <button onClick={reiniciarGrabacion}
                 className="flex items-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold hover:bg-amber-200 transition-colors"
-              >
+                title="Volver a la posición inicial del problema">
                 <RotateCcw className="w-4 h-4" /> Reiniciar
               </button>
-
-              <button
-                onClick={guardarSolucion}
-                disabled={!pgn.trim() || guardandoSol}
-                className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition-colors"
-              >
-                {guardandoSol
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Save className="w-4 h-4" />}
+              <button onClick={guardarSolucion} disabled={!pgn.trim() || guardandoSol}
+                className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded-full text-sm font-semibold hover:bg-green-700 disabled:opacity-40 transition-colors">
+                {guardandoSol ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {guardandoSol ? 'Guardando...' : 'Guardar solución'}
               </button>
-
-              <button
-                onClick={cancelarGrabacion}
-                className="flex items-center gap-2 px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors"
-              >
+              <button onClick={cancelarGrabacion}
+                className="flex items-center gap-2 px-4 py-1.5 bg-slate-200 text-slate-700 rounded-full text-sm font-semibold hover:bg-slate-300 transition-colors">
                 <X className="w-4 h-4" /> Cancelar
               </button>
             </>
           )}
 
-          {/* Modo normal: botón Grabar + indicador de estado */}
+          {/* Modo normal: botón grabar + estado */}
           {esProfesor && !grabando && (
             <>
-              <button
-                onClick={iniciarGrabacion}
-                className="flex items-center gap-2 px-4 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-full text-sm font-semibold transition-colors"
-              >
+              <button onClick={iniciarGrabacion}
+                className="flex items-center gap-2 px-4 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-full text-sm font-semibold transition-colors">
                 <Video className="w-4 h-4" />
                 {tieneSolucion ? 'Regrabar solución' : 'Grabar solución'}
               </button>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                tieneSolucion
-                  ? 'bg-green-50 text-green-700'
-                  : 'bg-amber-50 text-amber-700'
+                tieneSolucion ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
               }`}>
                 {tieneSolucion ? '✓ Solución grabada' : '⚠ Sin solución'}
               </span>
             </>
           )}
 
-          {/* Botón Ver / Ocultar solución */}
+          {/* Ver / Ocultar solución */}
           {puedeVerSolucion && tieneSolucion && !grabando && (
-            <button
-              onClick={toggleSolucion}
+            <button onClick={toggleSolucion}
               className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
                 mostrandoSolucion
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              }`}
-            >
+              }`}>
               {mostrandoSolucion ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               {mostrandoSolucion ? 'Ocultar solución' : 'Ver solución'}
             </button>
@@ -303,10 +704,120 @@ export default function VisorEjercicio({
         </div>
       </div>
 
-      {/* Tablero + Planilla */}
+      {/* Tabs (solo profesor, fuera del modo grabación) */}
+      {esProfesor && !grabando && (
+        <div className="w-full px-4 mb-2 flex gap-1 border-b border-slate-200">
+          {(['tablero', 'respuestas'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-semibold transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+                tab === t
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}>
+              {t === 'tablero' ? 'Tablero' : (
+                <>
+                  <Users className="w-3.5 h-3.5" />
+                  Respuestas{respuestas.length > 0 ? ` (${respuestas.length})` : ''}
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Panel de respuestas */}
+      {esProfesor && tab === 'respuestas' && !grabando && (
+        <div className="w-full px-4 pb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              {cargandoResp ? 'Cargando...' : `${respuestas.length} alumno${respuestas.length !== 1 ? 's' : ''}`}
+            </p>
+            <button onClick={fetchRespuestas}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              <RefreshCw className="w-3 h-3" /> Actualizar
+            </button>
+          </div>
+
+          {cargandoResp ? (
+            <div className="flex items-center justify-center py-12 gap-3 text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Cargando respuestas...</span>
+            </div>
+          ) : respuestas.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-sm">
+              Ningún alumno ha iniciado el ejercicio aún.
+            </div>
+          ) : (
+            respuestas.map(r => {
+              const cfg = ESTADO_CFG[r.estado as keyof typeof ESTADO_CFG] ?? ESTADO_CFG.NO_INICIADO;
+              const tiempo = formatTiempo(r.fecha_primer_acceso, r.fecha_completado);
+              const pgnCargar = r.pgn_ultimo_movimiento ?? r.pgn_avanzado_correcto;
+              return (
+                <div key={r.id}
+                  className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 text-sm">
+                      {r.alumno.nombre} {r.alumno.apellidos}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                      {r.fecha_primer_acceso && (
+                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {tiempo}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-slate-400">
+                        ❌ {r.intentos_fallidos} errores
+                      </span>
+                      {r.puntuacion !== null && (
+                        <span className="text-[11px] font-bold text-blue-600">
+                          📊 {r.puntuacion}/10
+                        </span>
+                      )}
+                    </div>
+                    {r.comentario_alumno && (
+                      <p className="text-xs text-slate-500 mt-1.5 italic">
+                        "{r.comentario_alumno}"
+                      </p>
+                    )}
+                  </div>
+
+                  {pgnCargar && (
+                    <button
+                      onClick={() => {
+                        cargarPgn(pgnCargar);
+                        setTab('tablero');
+                        setMostrandoSolucion(false);
+                        setComentarioVistaAlumno({
+                          respuestaId:       r.id,
+                          nombre:            `${r.alumno.nombre} ${r.alumno.apellidos}`,
+                          comentario:        r.comentario_alumno,
+                          revisionInicial:   r.comentario_revision,
+                          puntuacionInicial: r.puntuacion,
+                        });
+                        setRevisionProfesor(r.comentario_revision ?? '');
+                        setPuntuacionProfesor(r.puntuacion ?? null);
+                        setEvalGuardadaOk(false);
+                      }}
+                      className="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Ver posición
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Tablero + Planilla (solo pestaña tablero o modo grabación) */}
+      {(tab === 'tablero' || grabando) && (
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-stretch justify-center">
 
-        {/* Comentarios de la solución (solo visible al grabar) */}
+        {/* Panel izquierdo: comentario editable al grabar */}
         {esProfesor && grabando && (
           <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -321,7 +832,7 @@ export default function VisorEjercicio({
           </div>
         )}
 
-        {/* Comentario de la solución (lectura) al ver la solución */}
+        {/* Panel izquierdo: comentario de solo lectura al ver la solución */}
         {mostrandoSolucion && comentarioSolucion && (
           <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -333,38 +844,250 @@ export default function VisorEjercicio({
           </div>
         )}
 
+        {/* Panel izquierdo: evaluación del profesor al ver posición de alumno */}
+        {esProfesor && !grabando && comentarioVistaAlumno && (
+          <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3">
+
+            {/* Cabecera con nombre y botón cerrar */}
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                Evaluación
+              </label>
+              <button
+                onClick={() => { cargarPgn(pgnInicial); setComentarioVistaAlumno(null); }}
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                title="Volver a la posición inicial"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+            <div className="px-3 py-2 bg-slate-100 rounded-xl">
+              <p className="text-sm font-semibold text-slate-700">{comentarioVistaAlumno.nombre}</p>
+            </div>
+
+            {/* Comentario del alumno (solo lectura) */}
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                Comentario del alumno
+              </p>
+              {comentarioVistaAlumno.comentario ? (
+                <textarea
+                  readOnly
+                  rows={5}
+                  className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto"
+                  value={comentarioVistaAlumno.comentario}
+                />
+              ) : (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-400 italic">
+                  Sin comentario.
+                </div>
+              )}
+            </div>
+
+            {/* Puntuación 1-5 */}
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                Puntuación
+              </p>
+              <div className="flex gap-1.5">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setPuntuacionProfesor(puntuacionProfesor === n ? null : n)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border-2 ${
+                      puntuacionProfesor === n
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Comentario de revisión del profesor */}
+            <div className="flex flex-col gap-2 flex-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                Tu comentario de revisión
+              </p>
+              <textarea
+                rows={5}
+                className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                value={revisionProfesor}
+                onChange={e => setRevisionProfesor(e.target.value)}
+                placeholder="Indica al alumno qué hizo bien, qué falló y cómo mejorar..."
+              />
+            </div>
+
+            {/* Botón guardar evaluación */}
+            <button
+              onClick={guardarEvaluacion}
+              disabled={guardandoEval}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+            >
+              {guardandoEval
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+                : evalGuardadaOk
+                ? '✓ Evaluación guardada'
+                : 'Guardar evaluación'
+              }
+            </button>
+          </div>
+        )}
+
+        {/* Panel izquierdo: timer y fallos del alumno */}
+        {!esProfesor && !grabando && !mostrandoSolucion && (
+          <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3">
+
+            {/* Timer */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center gap-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tiempo</p>
+              <p className="text-4xl font-black text-slate-800 font-mono tracking-tight">
+                {timerStr}
+              </p>
+              {evaluado ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 mt-1">
+                  ★ Evaluado
+                </span>
+              ) : completado ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 mt-1">
+                  <CheckCircle className="w-3 h-3" /> Completado
+                </span>
+              ) : null}
+            </div>
+
+            {/* Fallos */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center gap-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Errores</p>
+              <p className={`text-4xl font-black font-mono tracking-tight ${
+                intentosFallidos === 0
+                  ? 'text-green-600'
+                  : intentosFallidos < 5
+                  ? 'text-amber-500'
+                  : 'text-red-500'
+              }`}>
+                {intentosFallidos}
+              </p>
+            </div>
+
+            {/* Fecha de entrega si existe */}
+            {fechaEntrega && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center gap-1">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Entrega</p>
+                <p className="text-sm font-bold text-slate-700 text-center">
+                  {new Date(fechaEntrega).toLocaleDateString('es-ES', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {new Date(fechaEntrega).toLocaleTimeString('es-ES', {
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* Evaluación del profesor (si existe) */}
+            {(progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined ||
+              progresoProp?.comentario_revision) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex flex-col gap-3">
+                <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">
+                  Evaluación del profesor
+                </p>
+
+                {/* Puntuación */}
+                {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <div key={n}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                            n <= (progresoProp.puntuacion ?? 0)
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-blue-100 text-blue-300'
+                          }`}>
+                          {n}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-sm font-bold text-blue-700">
+                      {progresoProp.puntuacion}/5
+                    </span>
+                  </div>
+                )}
+
+                {/* Comentario de revisión */}
+                {progresoProp?.comentario_revision && (
+                  <textarea
+                    readOnly
+                    rows={4}
+                    className="w-full p-3 bg-white border border-blue-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto"
+                    value={progresoProp.comentario_revision}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Comentario para el profesor */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 flex-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                Tu comentario para el profesor
+              </p>
+              <textarea
+                rows={5}
+                className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                value={comentarioAlumno}
+                onChange={e => setComentarioAlumno(e.target.value)}
+                placeholder="Describe tu razonamiento, dudas o preguntas..."
+              />
+              <button
+                onClick={guardarComentarioAlumno}
+                disabled={!comentarioAlumno.trim() || enviandoComentario}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+              >
+                {enviandoComentario
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+                  : comentarioGuardadoOk
+                  ? '✓ Guardado'
+                  : 'Guardar comentario'
+                }
+              </button>
+            </div>
+
+          </div>
+        )}
+
         {/* Tablero */}
-        <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
+        <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c] self-start">
           <ChessboardCore
             fen={fenVisible}
-            squareStyles={estilosCombinados}
+            squareStyles={estilosMerged}
             orientation={orientacion}
-            allowDragging={grabando}
-            onPieceDrop={onPieceDrop}
+            allowDragging={puedeArrastrar}
+            onPieceDrop={esProfesor ? onPieceDrop : onPieceDropAlumno}
             onPieceDrag={onPieceDrag}
             onSquareClick={onSquareClick}
           />
         </div>
 
-        {/* Planilla */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 relative h-[350px] lg:h-auto">
-          <div className="absolute inset-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto pr-2">
-              <Planilla
-                historialMovimientos={historialMovimientos}
-                indiceVista={indiceVista}
-                setIndiceVista={setIndiceVista}
-                estamosEnElPresente={estamosEnElPresente}
-                irAlInicio={irAlInicio}
-                irAtras={irAtras}
-                irAdelante={irAdelante}
-                irAlFinal={irAlFinal}
-              />
-            </div>
-          </div>
+        {/* Planilla — altura fija que coincide aproximadamente con el tablero.
+             El scroll interno de Planilla (flex-1 overflow-y-auto) gestiona los movimientos. */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 lg:h-[548px]">
+          <Planilla
+            historialMovimientos={historialMovimientos}
+            indiceVista={indiceVista}
+            setIndiceVista={setIndiceVista}
+            estamosEnElPresente={estamosEnElPresente}
+            irAlInicio={irAlInicio}
+            irAtras={irAtras}
+            irAdelante={irAdelante}
+            irAlFinal={irAlFinal}
+          />
         </div>
-
       </div>
+
+      )}
 
       {/* Controles inferiores */}
       <div className="w-full mt-6 px-4 flex justify-end">
