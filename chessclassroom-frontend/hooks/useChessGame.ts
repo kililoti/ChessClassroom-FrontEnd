@@ -18,16 +18,25 @@ export const STYLE_MOVE_CAPTURE: React.CSSProperties = { background: 'radial-gra
 export const STYLE_LAST_MOVE: React.CSSProperties    = { backgroundColor: 'rgba(59,130,246,0.35)' };
 export const STYLE_CHECK: React.CSSProperties        = { background: 'radial-gradient(circle, rgba(239,68,68,0.9) 40%, transparent 44%)' };
 
+// Extrae el FEN del header [FEN "..."] de un PGN, si existe.
+function extraerFenHeader(pgn: string): string | null {
+  return pgn?.match(/\[FEN "([^"]+)"\]/)?.[1] ?? null;
+}
+
 export function buildGameAtIndex(pgn: string, index: number): Chess {
   const base = new Chess();
   if (pgn) { try { base.loadPgn(pgn); } catch {} }
-  const g = new Chess();
+
+  const fenInicio = extraerFenHeader(pgn) ?? FEN_INICIAL;
+  const g = new Chess(fenInicio);
   base.history().slice(0, index).forEach(san => { try { g.move(san); } catch {} });
   return g;
 }
 
 export function getFenAtIndex(pgn: string, index: number, totalMoves: number): string {
-  if (index === 0) return FEN_INICIAL;
+  if (index === 0) {
+    return extraerFenHeader(pgn) ?? FEN_INICIAL;
+  }
   if (index === totalMoves) {
     const g = new Chess();
     if (pgn) { try { g.loadPgn(pgn); } catch {} }
@@ -82,12 +91,12 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
   const [casillasBase, setCasillasBase] = useState<Record<string, React.CSSProperties>>({});
   const [casillasInt, setCasillasInt]   = useState<Record<string, React.CSSProperties>>({});
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
-  
+
   const [orientacionInicial, setOrientacionInicial] = useState<'white' | 'black'>('white');
 
   const gameRef = useRef<Chess>(new Chess());
 
-  // Carga inicial (Solo se ejecuta al montar el componente)
+  // Carga inicial
   useEffect(() => {
     if (!pgnInicial) return;
     const temp    = new Chess();
@@ -96,20 +105,17 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
     if (pgnLimpio.startsWith('"') && pgnLimpio.endsWith('"')) {
       pgnLimpio = pgnLimpio.slice(1, -1).replace(/\\n/g, '\n');
     }
-    
+
     for (const intento of [pgnLimpio, pgnLimpio + '\n\n']) {
       if (cargado) break;
       try { temp.loadPgn(intento); cargado = true; } catch {}
     }
-
     if (!cargado) {
       try { temp.load(pgnLimpio); cargado = true; } catch {}
     }
 
     if (cargado) {
-      const hist = temp.history();
-      const len = hist.length;
-      
+      const len = temp.history().length;
       setPgn(temp.pgn());
       setTotalMoves(len);
       setIndiceVista(len);
@@ -244,7 +250,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
   const cargarPgn = useCallback((nuevoPgn: string) => {
     const temp = new Chess();
     let cargado = false;
-    let pgnLimpio = nuevoPgn.trim();
+    const pgnLimpio = nuevoPgn.trim();
 
     if (pgnLimpio) {
       for (const intento of [pgnLimpio, pgnLimpio + '\n\n']) {
@@ -255,9 +261,8 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
         try { temp.load(pgnLimpio); cargado = true; } catch {}
       }
     }
-    
-    const hist = cargado ? temp.history() : [];
-    const len = hist.length;
+
+    const len = cargado ? temp.history().length : 0;
     setPgn(cargado ? temp.pgn() : '');
     setTotalMoves(len);
     setIndiceVista(len);
