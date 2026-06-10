@@ -57,6 +57,7 @@ export function EstadoEjercicioPill({
   fechaEntrega?: string | null;
   solucionPgn?: string | null;
 }) {
+  // Prioridad máxima: Avisar al profesor si falta la solución
   if (!solucionPgn) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
@@ -68,6 +69,7 @@ export function EstadoEjercicioPill({
 
   const ahora = new Date();
 
+  // Si no ha empezado aún
   if (fechaInicio && new Date(fechaInicio) > ahora) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
@@ -76,6 +78,7 @@ export function EstadoEjercicioPill({
     );
   }
 
+  // Si ya terminó
   if (fechaEntrega && new Date(fechaEntrega) < ahora) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100">
@@ -84,6 +87,7 @@ export function EstadoEjercicioPill({
     );
   }
 
+  // Activo normal
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
       <PlayCircle className="w-2.5 h-2.5" /> Activo
@@ -91,8 +95,6 @@ export function EstadoEjercicioPill({
   );
 }
 
-// Estado personal del alumno en un ejercicio.
-// Si el profesor ya ha asignado puntuación. "Evaluado" prioridad máxima.
 export function EstadoAlumnoPill({
   estado,
   puntuacion,
@@ -102,7 +104,6 @@ export function EstadoAlumnoPill({
 }) {
   if (!estado) return null;
 
-  // Evaluado tiene prioridad sobre el resto de estados
   if (puntuacion !== null && puntuacion !== undefined) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
@@ -274,6 +275,10 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}
+            </span>
+
             <CategoriaTag categoria={archivo.categoria} />
 
             {metaEj ? (
@@ -283,13 +288,15 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
                   fechaEntrega={metaEj.fecha_entrega}
                   solucionPgn={metaEj.solucion_pgn}
                 />
+                
+                {/* LÓGICA DE TIEMPO LIMPIA */}
                 {esFuturo ? (
                   <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
                     <Calendar className="w-3 h-3" /> Disponible el: {formatFecha(metaEj.fecha_inicio)}
                   </span>
-                ) : metaEj.fecha_entrega ? (
-                  <span className={`text-[11px] flex items-center gap-1 font-medium px-2 py-0.5 rounded-full ${esVencido ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                    <Clock className="w-3 h-3" /> {esVencido ? 'Vencido' : `Vence: ${formatFecha(metaEj.fecha_entrega)}`}
+                ) : (metaEj.fecha_entrega && !esVencido) ? (
+                  <span className="text-[11px] flex items-center gap-1 font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                    <Clock className="w-3 h-3" /> Vence: {formatFecha(metaEj.fecha_entrega)}
                   </span>
                 ) : null}
               </>
@@ -307,7 +314,6 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
       {/* Zona derecha jugadores, estado del alumno y botones */}
       <div className="flex items-center flex-wrap gap-3 shrink-0">
 
-        {/* Jugadores siempre que haya partida, sea ejercicio o estudio */}
         {partida && (
           <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5">
             <div className="flex flex-col gap-0.5 text-right">
@@ -325,15 +331,13 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </div>
         )}
 
-        {/* Estado personal del alumno, incluye "Evaluado" si hay puntuación */}
         {!esProfesor && metaEj && !estaBloqueadoParaAlumno && (
           <EstadoAlumnoPill
             estado={metaEj.estado_alumno}
-            puntuacion={metaEj.puntuacion_alumno}
+            puntuacion={metaEj.puntuacion_alumno} 
           />
         )}
 
-        {/* Botones del profesor */}
         {esProfesor && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {onFechaEntrega && (
