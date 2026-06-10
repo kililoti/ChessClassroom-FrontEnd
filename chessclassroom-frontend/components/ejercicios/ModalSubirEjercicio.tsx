@@ -29,53 +29,88 @@ interface Props {
 export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Props) {
   const [nombre, setNombre]             = useState('');
   const [categoria, setCategoria]       = useState<Categoria | ''>('');
-  const [archivo, setArchivo]           = useState<File | null>(null);
+  const [archivos, setArchivos]         = useState<File[]>([]);
   const [textoFenPgn, setTextoFenPgn]   = useState('');
   const [fechaInicio, setFechaInicio]   = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [loading, setLoading]           = useState(false);
+  const [progreso, setProgreso]         = useState(0);
   const [error, setError]               = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const tieneArchivo = !!archivo;
-  const tieneTexto   = textoFenPgn.trim().length > 0;
-  const hayConflicto = tieneArchivo && tieneTexto;
-  const puedeSubir   = !hayConflicto && (tieneArchivo || tieneTexto) && !!categoria && !loading;
+  const tieneArchivos = archivos.length > 0;
+  const tieneTexto    = textoFenPgn.trim().length > 0;
+  const hayConflicto  = tieneArchivos && tieneTexto;
+  const puedeSubir    = !hayConflicto && (tieneArchivos || tieneTexto) && !!categoria && !loading;
+
+  const quitarArchivo = (index: number) => {
+    setArchivos(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubir = async () => {
     if (!puedeSubir) return;
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setProgreso(0);
 
-    if (fechaInicio && fechaEntrega) {
-      if (new Date(fechaInicio) > new Date(fechaEntrega)) {
-        setError('La fecha de inicio no puede ser posterior a la fecha de entrega.');
-        setLoading(false);
-        return;
-      }
+    if (fechaInicio && fechaEntrega && new Date(fechaInicio) > new Date(fechaEntrega)) {
+      setError('La fecha de inicio no puede ser posterior a la fecha de entrega.');
+      setLoading(false);
+      return;
     }
 
     try {
-      const form = new FormData();
-      form.append('carpeta_id', carpetaId);
-      form.append('categoria', categoria as string);
-      if (nombre.trim()) form.append('nombre', nombre.trim());
-      if (fechaInicio)   form.append('fecha_inicio',  new Date(`${fechaInicio}T00:00:00`).toISOString());
-      if (fechaEntrega)  form.append('fecha_entrega', new Date(`${fechaEntrega}T23:59:59`).toISOString());
-      form.append('visible', 'true');
+      if (tieneArchivos) {
+        // Subir cada archivo individualmente
+        for (let i = 0; i < archivos.length; i++) {
+          const archivo = archivos[i];
 
-      if (tieneArchivo && archivo) {
-        form.append('file', archivo);
+          // Nombre: si el profesor puso un nombre base, usar "nombre N"
+          // Sino, usar el nombre original del archivo (sin extensión)
+          const nombreFinal = nombre.trim()
+            ? archivos.length === 1
+              ? nombre.trim()
+              : `${nombre.trim()} ${i + 1}`
+            : archivo.name.replace(/\.[^/.]+$/, ''); // quita extensión
+
+          const form = new FormData();
+          form.append('carpeta_id', carpetaId);
+          form.append('categoria', categoria as string);
+          form.append('nombre', nombreFinal);
+          if (fechaInicio)  form.append('fecha_inicio',  new Date(`${fechaInicio}T00:00:00`).toISOString());
+          if (fechaEntrega) form.append('fecha_entrega', new Date(`${fechaEntrega}T23:59:59`).toISOString());
+          form.append('visible', 'true');
+          form.append('file', archivo);
+
+          const res = await fetch(API, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${getToken()}` },
+            body: form,
+          });
+          const d = await res.json();
+          if (!res.ok) throw new Error(`${nombreFinal}: ${d.error || 'Error al subir'}`);
+
+          setProgreso(i + 1);
+        }
       } else {
+        // Subir texto FEN/PGN (un único ejercicio)
+        const form = new FormData();
+        form.append('carpeta_id', carpetaId);
+        form.append('categoria', categoria as string);
+        if (nombre.trim()) form.append('nombre', nombre.trim());
+        if (fechaInicio)   form.append('fecha_inicio',  new Date(`${fechaInicio}T00:00:00`).toISOString());
+        if (fechaEntrega)  form.append('fecha_entrega', new Date(`${fechaEntrega}T23:59:59`).toISOString());
+        form.append('visible', 'true');
         form.append('texto_fen_o_pgn', textoFenPgn.trim());
+
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: form,
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || 'Error al subir el ejercicio');
+        setProgreso(1);
       }
 
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: form,
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Error al subir el ejercicio');
       onSubido(); onClose();
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -101,45 +136,71 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
         {hayConflicto && (
           <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Tienes un archivo seleccionado <strong>y</strong> texto pegado. Usa solo uno de los dos métodos.</span>
+            <span>Tienes archivos seleccionados <strong>y</strong> texto pegado. Usa solo uno de los dos métodos.</span>
           </div>
         )}
 
         <div className="space-y-5">
 
-          {/* Opción A: archivo */}
+          {/* Opción A: archivos múltiples */}
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
-              Opción A — Archivo PGN / FEN
+              Opción A — Archivo(s) PGN / FEN
             </label>
             <div
               onClick={() => inputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
-                tieneArchivo
+                tieneArchivos
                   ? hayConflicto ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-blue-50'
                   : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50'
               }`}
             >
-              {archivo ? (
-                <div className="flex items-center justify-center gap-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <p className="text-sm font-semibold text-blue-600">{archivo.name}</p>
+              {tieneArchivos ? (
+                <div className="flex flex-col gap-1.5">
+                  {archivos.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <p className="text-sm font-semibold text-blue-600 truncate">{f.name}</p>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); quitarArchivo(i); }}
+                        className="ml-2 text-slate-400 hover:text-red-500 shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                   <button
-                    onClick={e => { e.stopPropagation(); setArchivo(null); if (inputRef.current) inputRef.current.value = ''; }}
-                    className="ml-1 text-slate-400 hover:text-red-500"
+                    onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
+                    className="text-xs text-blue-500 hover:text-blue-700 font-semibold mt-1"
                   >
-                    <X className="w-4 h-4" />
+                    + Añadir más archivos
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1">
                   <Upload className="w-6 h-6 text-slate-400" />
-                  <p className="text-sm text-slate-500">Haz clic para seleccionar un archivo <span className="font-semibold">.pgn</span></p>
-                  <p className="text-[11px] text-slate-400">Un PGN con múltiples partidas crea ejercicios múltiples</p>
+                  <p className="text-sm text-slate-500">
+                    Haz clic para seleccionar <span className="font-semibold">uno o varios archivos .pgn</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400">Cada archivo se sube como un ejercicio independiente</p>
                 </div>
               )}
             </div>
-            <input ref={inputRef} type="file" accept=".pgn,.fen" className="hidden" onChange={e => setArchivo(e.target.files?.[0] ?? null)} />
+            <input
+              ref={inputRef} type="file" accept=".pgn,.fen" multiple className="hidden"
+              onChange={e => {
+                const nuevos = Array.from(e.target.files ?? []);
+                setArchivos(prev => {
+                  // Evitar duplicados por nombre
+                  const nombresExistentes = new Set(prev.map(f => f.name));
+                  return [...prev, ...nuevos.filter(f => !nombresExistentes.has(f.name))];
+                });
+                // Reset input para poder seleccionar el mismo archivo otra vez
+                e.target.value = '';
+              }}
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -167,7 +228,11 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
           {/* Nombre */}
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">
-              Nombre <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+              Nombre <span className="text-slate-400 font-normal normal-case">
+                {tieneArchivos && archivos.length > 1
+                  ? '(opcional — se usará como base: "nombre 1", "nombre 2"...)'
+                  : '(opcional — si se deja vacío se usa el nombre del archivo)'}
+              </span>
             </label>
             <input
               className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
@@ -183,22 +248,18 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
                 <Calendar className="w-3 h-3 text-blue-500" /> Fecha de inicio
                 <span className="text-slate-400 font-normal normal-case ml-1">(opcional)</span>
               </label>
-              <input
-                type="date" lang="es-ES"
+              <input type="date" lang="es-ES"
                 className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
-                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
-              />
+                value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-red-500" /> Fecha de entrega
                 <span className="text-slate-400 font-normal normal-case ml-1">(opcional)</span>
               </label>
-              <input
-                type="date" lang="es-ES"
+              <input type="date" lang="es-ES"
                 className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
-                value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)}
-              />
+                value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
             </div>
           </div>
 
@@ -222,6 +283,17 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
           </div>
         </div>
 
+        {/* Barra de progreso al subir múltiples archivos */}
+        {loading && tieneArchivos && archivos.length > 1 && (
+          <div className="mt-4">
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(progreso / archivos.length) * 100}%` }} />
+            </div>
+            <p className="text-xs text-slate-400 mt-1 text-center">{progreso} / {archivos.length} archivos</p>
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end mt-6">
           <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
             Cancelar
@@ -231,7 +303,10 @@ export default function ModalSubirEjercicio({ carpetaId, onClose, onSubido }: Pr
             title={hayConflicto ? 'Usa solo un método de entrada' : !categoria ? 'Selecciona una categoría' : ''}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />} Subir ejercicio
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {tieneArchivos && archivos.length > 1
+              ? `Subir ${archivos.length} ejercicios`
+              : 'Subir ejercicio'}
           </button>
         </div>
       </div>
