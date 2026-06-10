@@ -911,13 +911,25 @@ export default function VisorEjercicio({
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
                 Tu comentario de revisión
               </p>
+
               <textarea
                 rows={5}
+                maxLength={350}
                 className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                 value={revisionProfesor}
                 onChange={e => setRevisionProfesor(e.target.value)}
                 placeholder="Indica al alumno qué hizo bien, qué falló y cómo mejorar..."
               />
+
+              <span
+                className={`text-xs text-right ${
+                  revisionProfesor.length >= 350
+                    ? 'text-red-500'
+                    : 'text-slate-500'
+                }`}
+              >
+                {revisionProfesor.length}/350
+              </span>
             </div>
 
             {/* Botón guardar evaluación */}
@@ -1034,13 +1046,25 @@ export default function VisorEjercicio({
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
                 Tu comentario para el profesor
               </p>
+
               <textarea
                 rows={5}
+                maxLength={350}
                 className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
                 value={comentarioAlumno}
                 onChange={e => setComentarioAlumno(e.target.value)}
                 placeholder="Describe tu razonamiento, dudas o preguntas..."
               />
+
+              <span
+                className={`text-xs text-right ${
+                  comentarioAlumno.length >= 350
+                    ? 'text-red-500'
+                    : 'text-slate-500'
+                }`}
+              >
+                {comentarioAlumno.length}/350
+              </span>
               <button
                 onClick={guardarComentarioAlumno}
                 disabled={!comentarioAlumno.trim() || enviandoComentario}
