@@ -62,12 +62,13 @@ export default function EjercicioPage() {
       setProps({
         ejercicioId,
         esProfesor,
-        pgnInicial:            progreso?.pgn_avanzado_correcto ?? pgnInicial,
-        solucionPgn:           config.solucion_pgn ?? undefined,
-        comentarioSolucion:    config.comentarios_solucion ?? undefined,
+        pgnInicial:         progreso?.pgn_avanzado_correcto ?? pgnInicial,
+        pgnBase:            pgnInicial,
+        solucionPgn:        config.solucion_pgn ?? undefined,
+        comentarioSolucion: config.comentarios_solucion ?? undefined,
         progreso,
-        fechaEntrega:          config.fecha_entrega ?? null,
-        asignado:              config.asignado,
+        fechaEntrega:       config.fecha_entrega ?? null,
+        asignado:           config.asignado,
       });
     } catch (e: any) { setError(e.message); }
     finally { setCargando(false); }
