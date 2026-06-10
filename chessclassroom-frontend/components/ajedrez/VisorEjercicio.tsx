@@ -163,6 +163,7 @@ export default function VisorEjercicio({
   useEffect(() => { fetchRespuestas(); }, [ejercicioId, esProfesor]);
   useEffect(() => { if (tab === 'respuestas') fetchRespuestas(); }, [tab]);
 
+  // ── Timer del alumno ──────────────────────────────────────────────────────
   // Cuenta solo mientras la página está abierta.
   // Arranca desde tiempo_acumulado (ya guardado en BD).
   // Cada FLUSH_INTERVAL segundos envía los nuevos segundos al backend.
@@ -912,33 +913,6 @@ export default function VisorEjercicio({
                   <p className="text-sm font-bold text-slate-700 text-center">
                     {new Date(fechaEntrega).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
-                  <p className="text-xs text-slate-400">
-                    {new Date(fechaEntrega).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              )}
-              {(progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined ||
-                progresoProp?.comentario_revision) && (
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex flex-col gap-3">
-                  <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Evaluación del profesor</p>
-                  {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && (
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <div key={n} className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                            n <= (progresoProp.puntuacion ?? 0) ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-300'
-                          }`}>{n}</div>
-                        ))}
-                      </div>
-                      <span className="text-sm font-bold text-blue-700">{progresoProp.puntuacion}/5</span>
-                    </div>
-                  )}
-                  {progresoProp?.comentario_revision && (
-                    <textarea readOnly rows={4}
-                      className="w-full p-3 bg-white border border-blue-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto"
-                      value={progresoProp.comentario_revision}
-                    />
-                  )}
                 </div>
               )}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 flex-1">
@@ -959,6 +933,7 @@ export default function VisorEjercicio({
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
                     : comentarioGuardadoOk ? '✓ Guardado' : 'Guardar comentario'}
                 </button>
+
               </div>
             </div>
           )}
@@ -992,8 +967,8 @@ export default function VisorEjercicio({
         </div>
       )}
 
-      {/* Controles inferiores */}
-      <div className="w-full mt-6 px-4 flex justify-end">
+      {/* Girar tablero — debajo de la planilla, encima de la revisión */}
+      <div className="w-full px-4 flex justify-end -mt-8">
         <button
           onClick={() => setOrientacion(o => o === 'white' ? 'black' : 'white')}
           className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2"
@@ -1005,6 +980,55 @@ export default function VisorEjercicio({
           Girar Tablero
         </button>
       </div>
+
+      {/* Revisión del profesor — sección ancha debajo del tablero */}
+      {!esProfesor && (progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined || progresoProp?.comentario_revision) && (
+        <div className="w-full mt-4 px-4 max-w-7xl">
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">
+            Revisión del profesor
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-6 min-h-[200px]">
+
+            {/* Izquierda: label arriba, cajas y X/5 centradas verticalmente */}
+            {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && (
+              <div className="shrink-0 flex flex-col items-start">
+                <p className="text-xs font-bold text-blue-500 uppercase tracking-wide">Puntuación</p>
+                <div className="flex-1 flex flex-col items-start justify-center gap-2 mt-3">
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <div key={n} className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                        n <= (progresoProp.puntuacion ?? 0) ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-300'
+                      }`}>{n}</div>
+                    ))}
+                  </div>
+                  <span className="text-sm font-bold text-blue-700">{progresoProp.puntuacion}/5</span>
+                </div>
+              </div>
+            )}
+
+            {/* Separador vertical */}
+            {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && progresoProp?.comentario_revision && (
+              <div className="w-px bg-blue-200 self-stretch" />
+            )}
+
+            {/* Derecha: comentario */}
+            <div className="flex-1 flex flex-col gap-3">
+              <p className="text-xs font-bold text-blue-500 uppercase tracking-wide">Comentario</p>
+              {progresoProp?.comentario_revision ? (
+                <textarea
+                  readOnly
+                  className="flex-1 w-full p-3 bg-white border border-blue-e00 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto min-h-[140px]"
+                  value={progresoProp.comentario_revision}
+                />
+              ) : (
+                <p className="text-sm text-blue-300 italic">Sin comentario.</p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
