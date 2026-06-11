@@ -84,7 +84,6 @@ export function EstadoEjercicioPill({
     );
   }
 
-  // Activo solo si tiene ambas fechas; si falta alguna → "Sin fechas"
   if (!fechaInicio || !fechaEntrega) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
@@ -109,7 +108,6 @@ export function EstadoAlumnoPill({
 }) {
   if (!estado) return null;
 
-  // Si la fecha de entrega ha pasado y no está completado = "No completado"
   if (esVencido && estado !== 'COMPLETADO') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-100">
@@ -207,6 +205,7 @@ export function TarjetaDatabase({ archivo, esProfesor, onClick, onToggleVisibili
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}</span>
             <span className="text-[11px] text-violet-600 font-semibold">{archivo.metadata.total_partidas} partidas</span>
+            <CategoriaTag categoria={archivo.categoria} />
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
             <span className="text-[11px] text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" />{formatFecha(archivo.created_at)}</span>
@@ -289,14 +288,12 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {/* Nombre del profesor — mismo patrón que TarjetaCarpeta y TarjetaDatabase */}
             <span className="text-[11px] text-slate-400 flex items-center gap-1">
               <User className="w-3 h-3" />{nombreProfesor(archivo.usuarios)}
             </span>
 
             <CategoriaTag categoria={archivo.categoria} />
 
-            {/* Tag evaluado — justo después de la categoría */}
             {!esProfesor && metaEj?.puntuacion_alumno !== null && metaEj?.puntuacion_alumno !== undefined && (
               <EvaluadoTag puntuacion={metaEj.puntuacion_alumno} />
             )}
@@ -332,7 +329,6 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
       {/* Zona derecha: jugadores, estado del alumno y botones */}
       <div className="flex items-center flex-wrap gap-3 shrink-0">
 
-        {/* Jugadores siempre que haya partida */}
         {partida && (
           <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-lg px-4 py-2.5">
             <div className="flex flex-col gap-0.5 text-right">
@@ -350,12 +346,10 @@ export function FilaPartida({ archivo, esProfesor, onClick, onToggleVisibilidad,
           </div>
         )}
 
-        {/* Estado personal del alumno */}
         {!esProfesor && metaEj && !estaBloqueadoParaAlumno && (
           <EstadoAlumnoPill estado={metaEj.estado_alumno} esVencido={esVencido} />
         )}
 
-        {/* Botones del profesor */}
         {esProfesor && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {onFechaEntrega && (
