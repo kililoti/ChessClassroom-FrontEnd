@@ -599,36 +599,14 @@ export default function VisorEjercicio({
             </button>
           )}
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <div className="text-2xl font-bold text-slate-800 flex items-center gap-3">
               Ejercicio
               {grabando && (
                 <span className="text-sm font-semibold text-red-600 animate-pulse">
                   ● Grabando solución
                 </span>
               )}
-            </h2>
-            {!esProfesor && progresoProp?.fecha_primer_acceso && (
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <span className="text-sm text-slate-500 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> {timerStr}
-                </span>
-                <span className="text-xs text-slate-400">❌ {intentosFallidos} errores</span>
-                {evaluado ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                    ★ Evaluado
-                  </span>
-                ) : completado && !timerDetenido ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                    <CheckCircle className="w-3 h-3" /> Completado
-                  </span>
-                ) : null}
-                {fechaEntrega && (
-                  <span className="text-xs text-slate-400">
-                    Entrega: {new Date(fechaEntrega).toLocaleDateString('es-ES')}
-                  </span>
-                )}
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -948,9 +926,6 @@ export default function VisorEjercicio({
                   <p className="text-sm font-bold text-slate-700 text-center">
                     {new Date(fechaEntrega).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
-                  <p className="text-xs text-slate-400">
-                    {new Date(fechaEntrega).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
                 </div>
               )}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 flex-1">
@@ -1023,7 +998,7 @@ export default function VisorEjercicio({
 
       {/* Revisión del profesor — sección ancha debajo del tablero */}
       {!esProfesor && (progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined || progresoProp?.comentario_revision) && (
-        <div className="w-full mt-4 px-4 max-w-4xl">
+        <div className="w-full mt-4 px-4 max-w-7xl">
           <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">
             Revisión del profesor
           </p>
