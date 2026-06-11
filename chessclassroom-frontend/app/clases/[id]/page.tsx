@@ -55,15 +55,14 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
   }
 
   const secciones = [
-    { titulo: 'Sala Virtual',  ruta: `/clases/${clase.id}/sala-virtual`,  icono: '💻', color: 'blue',    desc: 'Pizarra interactiva y videollamada' },
-    { titulo: 'Estudio',       ruta: `/clases/${clase.id}/estudios`,       icono: '📚', color: 'indigo',  desc: 'Archivos PDF, teoría y recursos' },
-    { titulo: 'Ejercicios',    ruta: `/clases/${clase.id}/ejercicios`,     icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
-    { titulo: 'Partidas',      ruta: `/clases/${clase.id}/partidas`,       icono: '♟️', color: 'amber',   desc: 'Juega en vivo o revisa el historial' },
-    { titulo: 'Datos y ELO',   ruta: `/clases/${clase.id}/estadisticas`,   icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
-    { titulo: 'Objetivos',     ruta: `/clases/${clase.id}/objetivos`,      icono: '🎯', color: 'rose',    desc: 'Metas a superar a corto y largo plazo' },
-    { titulo: 'Rutina',        ruta: `/clases/${clase.id}/rutina`,         icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
+    { titulo: 'Sala Virtual', ruta: `/clases/${clase.id}/sala-virtual`, icono: '💻', color: 'blue', desc: 'Pizarra interactiva y videollamada' },
+    { titulo: 'Estudio', ruta: `/clases/${clase.id}/estudios`, icono: '📚', color: 'indigo', desc: 'Archivos PDF, teoría y recursos' },
+    { titulo: 'Ejercicios', ruta: `/clases/${clase.id}/ejercicios`, icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
+    { titulo: 'Partidas', ruta: `/clases/${clase.id}/partidas`, icono: '♟️', color: 'amber', desc: 'Juega en vivo o revisa el historial' },
+    { titulo: 'Datos y ELO', ruta: `/clases/${clase.id}/estadisticas`, icono: '📊', color: 'purple', desc: 'Gráficas de rendimiento y evolución' },
+    { titulo: 'Objetivos', ruta: `/clases/${clase.id}/objetivos`, icono: '🎯', color: 'rose', desc: 'Metas a superar a corto y largo plazo' },
+    { titulo: 'Rutina', ruta: `/clases/${clase.id}/rutinas`, icono: '📅', color: 'cyan', desc: 'Calendario de entrenamiento semanal' },
   ];
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
