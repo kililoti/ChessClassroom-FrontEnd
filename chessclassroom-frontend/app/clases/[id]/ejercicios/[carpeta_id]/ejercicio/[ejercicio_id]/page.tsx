@@ -15,18 +15,24 @@ function getUsuario(): any {
   try { return JSON.parse(localStorage.getItem('usuario') ?? '{}'); } catch { return {}; }
 }
 
+// Extrae la partida N de un PGN multi-partida
+function extraerPartidaDePgn(pgnCompleto: string, partidaIndex: number): string {
+  const bloques = pgnCompleto.split(/(?=\[Event\s)/g).filter(b => b.trim().length > 0);
+  return bloques[partidaIndex] ?? bloques[0] ?? pgnCompleto;
+}
+
 export default function EjercicioPage() {
-  const params      = useParams();
-  const router      = useRouter();
-  const claseId     = params.id as string;
-  const carpetaId   = params.carpeta_id as string;
+  const params = useParams();
+  const router = useRouter();
+  const claseId = params.id as string;
+  const carpetaId = params.carpeta_id as string;
   const ejercicioId = params.ejercicio_id as string;
 
-  const [props, setProps]     = useState<any | null>(null);
+  const [props, setProps] = useState<any | null>(null);
   const [cargando, setCargando] = useState(true);
-  const [error, setError]     = useState('');
+  const [error, setError] = useState('');
 
-  const usuario    = getUsuario();
+  const usuario = getUsuario();
   const esProfesor = usuario?.rol === 'profesor';
 
   useEffect(() => { cargar(); }, [ejercicioId]);
@@ -36,11 +42,14 @@ export default function EjercicioPage() {
     try {
       const h = { Authorization: `Bearer ${getToken()}` };
 
-      // Datos del ejercicio
+      // Datos del ejercicio (incluye partida_index y archivo_id)
       const resEj = await fetch(`${API_EJ}/${ejercicioId}`, { headers: h });
       const datEj = await resEj.json();
       if (!resEj.ok) throw new Error(datEj.error);
+
       const config = datEj.ejercicio.ejercicio_config;
+      const archivoId = datEj.ejercicio.archivo_id;
+      const esDatabaseEj = datEj.ejercicio.metadata?.es_base_datos === true;
 
       // Iniciar o recuperar progreso del alumno
       let progreso: ProgresoAlumno | undefined;
@@ -50,13 +59,12 @@ export default function EjercicioPage() {
         if (d.success) progreso = d.respuesta;
       }
 
-      // PGN inicial del archivo
       let pgnInicial = '';
-      const resDesc = await fetch(`${API_REC}/descargar/${ejercicioId}`, { headers: h });
+      const resDesc = await fetch(`${API_REC}/descargar/${archivoId}`, { headers: h });
       const datDesc = await resDesc.json();
       if (resDesc.ok && datDesc.url) {
-        const fileRes = await fetch(datDesc.url);
-        pgnInicial = (await fileRes.text()).trim();
+        const pgnCompleto = (await fetch(datDesc.url).then(r => r.text())).trim();
+        pgnInicial = extraerPartidaDePgn(pgnCompleto, config.partida_index ?? 0);
       }
 
       setProps({
@@ -69,6 +77,9 @@ export default function EjercicioPage() {
         progreso,
         fechaEntrega:       config.fecha_entrega ?? null,
         asignado:           config.asignado,
+        // Para saber a dónde volver al cerrar
+        _archivoId:         archivoId,
+        _esDatabaseEj:      esDatabaseEj,
       });
     } catch (e: any) { setError(e.message); }
     finally { setCargando(false); }
@@ -90,7 +101,13 @@ export default function EjercicioPage() {
     <div className="min-h-screen bg-slate-50 py-8">
       <VisorEjercicio
         {...props}
-        onClose={() => router.push(`/clases/${claseId}/ejercicios/${carpetaId}`)}
+        onClose={() => {
+          if (props._esDatabaseEj) {
+            router.push(`/clases/${claseId}/ejercicios/${carpetaId}/db/${props._archivoId}`);
+          } else {
+            router.push(`/clases/${claseId}/ejercicios/${carpetaId}`);
+          }
+        }}
       />
     </div>
   );

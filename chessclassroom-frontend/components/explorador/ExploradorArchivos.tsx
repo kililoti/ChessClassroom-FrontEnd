@@ -9,8 +9,8 @@ import ModalSubirPGN from './ModalSubirPGN';
 import ModalSubirEjercicio from '@/components/ejercicios/ModalSubirEjercicio';
 import ModalFechaEntrega, { FechasGrupoPayload } from '@/components/ejercicios/ModalFechaEntrega';
 
-const API     = 'http://localhost:3001/api/recursos';
-const API_EJ  = 'http://localhost:3001/api/ejercicios';
+const API = 'http://localhost:3001/api/recursos';
+const API_EJ = 'http://localhost:3001/api/ejercicios';
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -21,6 +21,7 @@ function getUsuario(): any {
 }
 
 // Modal Crear Carpeta
+
 function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada }: {
   claseId: string; carpetaPadreId: string | null; modulo: string;
   onClose: () => void; onCreada: () => void;
@@ -50,8 +51,7 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-slate-900 mb-4">{carpetaPadreId ? 'Nueva subcarpeta' : 'Nueva carpeta'}</h3>
         {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg mb-3">{error}</p>}
-        <input
-          autoFocus
+        <input autoFocus
           className="w-full p-3 border border-slate-300 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 text-sm"
           value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCrear()}
           placeholder="Nombre de la carpeta"
@@ -69,21 +69,19 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
 }
 
 // Modal Asignar fechas en grupo
-// Reutiliza ModalFechaEntrega, al guardar aplica las mismas fechas a todos los IDs.
-// La lógica de horarios (00:00 inicio / 23:59 entrega) la gestiona ModalFechaEntrega.
 
-function ModalFechasGrupo({ archivoIds, onClose, onGuardado }: {
-  archivoIds: string[];
+function ModalFechasGrupo({ ejercicioIds, onClose, onGuardado }: {
+  ejercicioIds: string[];
   onClose: () => void;
   onGuardado: () => void;
 }) {
-  const [progreso, setProgreso] = useState(0);
+  const [progreso, setProgreso]   = useState(0);
   const [guardando, setGuardando] = useState(false);
 
   const handleGuardar = async (payload: FechasGrupoPayload) => {
     setGuardando(true); setProgreso(0);
     try {
-      for (const id of archivoIds) {
+      for (const id of ejercicioIds) {
         await fetch(`${API_EJ}/${id}/fechas`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
@@ -92,21 +90,18 @@ function ModalFechasGrupo({ archivoIds, onClose, onGuardado }: {
         setProgreso(p => p + 1);
       }
       onGuardado(); onClose();
-    } catch (e: any) {
-      alert(e.message);
-    } finally {
-      setGuardando(false);
-    }
+    } catch (e: any) { alert(e.message); }
+    finally { setGuardando(false); }
   };
 
   return (
     <ModalFechaEntrega
       archivoId=""
-      nombreEjercicio={`${archivoIds.length} ejercicio${archivoIds.length !== 1 ? 's' : ''} seleccionado${archivoIds.length !== 1 ? 's' : ''}`}
+      nombreEjercicio={`${ejercicioIds.length} ejercicio${ejercicioIds.length !== 1 ? 's' : ''} seleccionado${ejercicioIds.length !== 1 ? 's' : ''}`}
       onClose={onClose}
       onGuardada={onClose}
       onGuardarGrupo={handleGuardar}
-      progresoGrupo={guardando ? { actual: progreso, total: archivoIds.length } : undefined}
+      progresoGrupo={guardando ? { actual: progreso, total: ejercicioIds.length } : undefined}
     />
   );
 }
@@ -135,44 +130,52 @@ export default function ExploradorArchivos({
   const usuario    = getUsuario();
   const esProfesor = usuario?.rol === 'profesor';
 
-  const [carpetas, setCarpetas]         = useState<Carpeta[]>([]);
-  const [archivos, setArchivos]         = useState<Archivo[]>([]);
-  const [breadcrumbs, setBreadcrumbs]   = useState<{ id: string; nombre: string }[]>([]);
+  const [carpetas, setCarpetas] = useState<Carpeta[]>([]);
+  const [archivos, setArchivos] = useState<Archivo[]>([]);
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; nombre: string }[]>([]);
   const [databaseActual, setDatabaseActual] = useState<Archivo | null>(null);
-  const [cargando, setCargando]         = useState(true);
-  const [cargandoPgn, setCargandoPgn]   = useState(false);
-  const [error, setError]               = useState('');
+
+  const [ejerciciosDatabase, setEjerciciosDatabase] = useState<any[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [cargandoPgn, setCargandoPgn] = useState(false);
+  const [error, setError] = useState('');
   const [modalCarpeta, setModalCarpeta] = useState(false);
-  const [modalPgn, setModalPgn]         = useState(false);
+  const [modalPgn, setModalPgn] = useState(false);
 
   // Selección múltiple
-  const [selectedIds, setSelectedIds]       = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalFechasGrupo, setModalFechasGrupo] = useState(false);
-  const [eliminandoGrupo, setEliminandoGrupo]   = useState(false);
+  const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
 
   // Fecha individual
   const [archivoFechaEntrega, setArchivoFechaEntrega] = useState<Archivo | null>(null);
 
   const estamosEnRaiz = !carpetaId;
 
-  // Limpiar selección al cambiar de carpeta
   useEffect(() => { setSelectedIds(new Set()); }, [carpetaId]);
 
   useEffect(() => {
     if (!carpetaId) { setBreadcrumbs([]); return; }
     fetch(`${API}/carpetas/ancestros/${carpetaId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setBreadcrumbs(d.ancestros); })
-      .catch(() => {});
+      .then(r => r.json()).then(d => { if (d.success) setBreadcrumbs(d.ancestros); }).catch(() => {});
   }, [carpetaId]);
 
+  // Recargar ejerciciosDatabase (llamado también tras guardar fechas)
+  const recargarEjerciciosDatabase = () => {
+    if (!archivoId || modulo !== 'ejercicio') return;
+    fetch(`${API_EJ}/archivo/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json()).then(d => { if (d.success) setEjerciciosDatabase(d.ejercicios); }).catch(() => {});
+  };
+
   useEffect(() => {
-    if (!archivoId) { setDatabaseActual(null); return; }
+    if (!archivoId) { setDatabaseActual(null); setEjerciciosDatabase([]); return; }
     fetch(`${API}/archivos/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setDatabaseActual(d.archivo); })
-      .catch(() => {});
-  }, [archivoId]);
+      .then(r => r.json()).then(d => { if (d.success) setDatabaseActual(d.archivo); }).catch(() => {});
+
+    if (modulo === 'ejercicio') {
+      recargarEjerciciosDatabase();
+    }
+  }, [archivoId, modulo]);
 
   useEffect(() => {
     if (claseId) cargarDatos();
@@ -200,22 +203,16 @@ export default function ExploradorArchivos({
     finally { setCargando(false); }
   };
 
-  const entrarCarpeta  = (id: string) => router.push(`${basePath}/${id}`);
+  const entrarCarpeta = (id: string) => router.push(`${basePath}/${id}`);
   const entrarDatabase = (id: string) => router.push(`${basePath}/${carpetaId}/db/${id}`);
 
   const volverAtras = () => {
     if (rutaVolver) { router.push(rutaVolver); return; }
-    if (archivoId) {
-      router.push(`${basePath}/${carpetaId}`);
-    } else if (carpetaId) {
-      if (breadcrumbs.length > 1) {
-        router.push(`${basePath}/${breadcrumbs[breadcrumbs.length - 2].id}`);
-      } else {
-        router.push(basePath);
-      }
-    } else {
-      router.back();
-    }
+    if (archivoId) { router.push(`${basePath}/${carpetaId}`); }
+    else if (carpetaId) {
+      if (breadcrumbs.length > 1) router.push(`${basePath}/${breadcrumbs[breadcrumbs.length - 2].id}`);
+      else router.push(basePath);
+    } else { router.back(); }
   };
 
   // Acciones individuales
@@ -233,8 +230,7 @@ export default function ExploradorArchivos({
   const toggleVisibilidadCarpeta = async (id: string, visible: boolean) => {
     try {
       const res = await fetch(`${API}/carpetas/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ visible: !visible }),
       });
       const d = await res.json();
@@ -257,8 +253,7 @@ export default function ExploradorArchivos({
   const toggleVisibilidadArchivo = async (id: string, visible: boolean) => {
     try {
       const res = await fetch(`${API}/archivos/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ visible: !visible }),
       });
       const d = await res.json();
@@ -268,6 +263,13 @@ export default function ExploradorArchivos({
   };
 
   const abrirPartidaIndividual = async (archivo: Archivo) => {
+    if (modulo === 'ejercicio') {
+      const ejercicioId = archivo.metadata_ejercicio?.id_ejercicio;
+      if (ejercicioId) {
+        router.push(`${basePath}/${carpetaId}/ejercicio/${ejercicioId}`);
+        return;
+      }
+    }
     try {
       setCargandoPgn(true);
       const res  = await fetch(`${API}/descargar/${archivo.id}`, { headers: { Authorization: `Bearer ${getToken()}` } });
@@ -280,7 +282,11 @@ export default function ExploradorArchivos({
     finally { setCargandoPgn(false); }
   };
 
-  const abrirPartidaDeDatabase = (database: Archivo, indexPartida: number) => {
+  const abrirPartidaDeDatabase = (database: Archivo, indexPartida: number, ejercicioId?: string) => {
+    if (modulo === 'ejercicio' && ejercicioId) {
+      router.push(`${basePath}/${carpetaId}/ejercicio/${ejercicioId}`);
+      return;
+    }
     setCargandoPgn(true);
     setTimeout(() => { onAbrirPartida(database, indexPartida); }, 50);
   };
@@ -298,11 +304,8 @@ export default function ExploradorArchivos({
   const seleccionarTodos = () => {
     const idsTodos = partidas.map(a => a.id);
     const todosSeleccionados = idsTodos.every(id => selectedIds.has(id));
-    if (todosSeleccionados) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(idsTodos));
-    }
+    if (todosSeleccionados) setSelectedIds(new Set());
+    else setSelectedIds(new Set(idsTodos));
   };
 
   const eliminarSeleccionados = async () => {
@@ -311,10 +314,7 @@ export default function ExploradorArchivos({
     setEliminandoGrupo(true);
     try {
       await Promise.all([...selectedIds].map(id =>
-        fetch(`${API}/archivos/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${getToken()}` },
-        })
+        fetch(`${API}/archivos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } })
       ));
       setArchivos(prev => prev.filter(a => !selectedIds.has(a.id)));
       setSelectedIds(new Set());
@@ -325,8 +325,18 @@ export default function ExploradorArchivos({
   const databases = archivos.filter(a => a.metadata?.es_base_datos);
   const partidas  = archivos.filter(a => !a.metadata?.es_base_datos);
   const tieneSeccionSuperior = carpetas.length > 0 || databases.length > 0;
-  const tieneContenido       = tieneSeccionSuperior || partidas.length > 0;
-  const todosSeleccionados   = partidas.length > 0 && partidas.every(a => selectedIds.has(a.id));
+  const tieneContenido = tieneSeccionSuperior || partidas.length > 0;
+  const todosSeleccionados = partidas.length > 0 && partidas.every(a => selectedIds.has(a.id));
+
+  // En vista database: selectedIds ya contiene ejercicio UUIDs directamente.
+  // En vista normal: mapear archivo_ids a ejercicio_ids via metadata_ejercicio.
+  const ejercicioIdsSeleccionados = modulo === 'ejercicio'
+    ? archivoId
+      ? [...selectedIds]
+      : [...selectedIds]
+          .map(aid => partidas.find(a => a.id === aid)?.metadata_ejercicio?.id_ejercicio)
+          .filter(Boolean) as string[]
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 relative">
@@ -357,10 +367,8 @@ export default function ExploradorArchivos({
                 {breadcrumbs.map((bc, i) => (
                   <React.Fragment key={bc.id}>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                    <button
-                      onClick={() => router.push(`${basePath}/${bc.id}`)}
-                      className={`hover:text-blue-600 transition-colors ${!archivoId && i === breadcrumbs.length - 1 ? 'text-slate-800 font-semibold' : ''}`}
-                    >
+                    <button onClick={() => router.push(`${basePath}/${bc.id}`)}
+                      className={`hover:text-blue-600 transition-colors ${!archivoId && i === breadcrumbs.length - 1 ? 'text-slate-800 font-semibold' : ''}`}>
                       {bc.nombre}
                     </button>
                   </React.Fragment>
@@ -369,7 +377,7 @@ export default function ExploradorArchivos({
                   <>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     <span className="text-slate-800 font-semibold flex items-center gap-1">
-                      📦 {databaseActual.nombre}
+                      {databaseActual.nombre}
                     </span>
                   </>
                 )}
@@ -401,9 +409,7 @@ export default function ExploradorArchivos({
 
         <div className={chatSlot ? 'grid grid-cols-1 lg:grid-cols-12 gap-8 items-start' : ''}>
           {chatSlot && (
-            <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full">
-              {chatSlot}
-            </div>
+            <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full">{chatSlot}</div>
           )}
 
           <div className={`space-y-8 ${chatSlot ? 'lg:col-span-8 xl:col-span-9' : ''}`}>
@@ -417,29 +423,110 @@ export default function ExploradorArchivos({
 
                 {archivoId && databaseActual ? (
                   <section>
-                    <h2 className="text-xs font-bold text-slate-500 mb-4 flex items-center gap-2 uppercase tracking-widest">
-                      <FileText className="w-4 h-4 text-violet-500" />
-                      Partidas indexadas ({databaseActual.metadata?.partidas?.length ?? 0})
-                    </h2>
+                    {/* Cabecera con seleccionar todos (solo profesor en modo ejercicio) */}
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xs font-bold text-slate-500 flex items-center gap-2 uppercase tracking-widest">
+                        <FileText className="w-4 h-4 text-violet-500" />
+                        {modulo === 'ejercicio' ? 'Ejercicios' : 'Partidas indexadas'} ({databaseActual.metadata?.partidas?.length ?? 0})
+                      </h2>
+                      {esProfesor && modulo === 'ejercicio' && ejerciciosDatabase.length > 0 && (
+                        <button
+                          onClick={() => {
+                            const ids = ejerciciosDatabase.map(e => e.id);
+                            const todos = ids.every(id => selectedIds.has(id));
+                            setSelectedIds(todos ? new Set() : new Set(ids));
+                          }}
+                          className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5"
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                            ejerciciosDatabase.length > 0 && ejerciciosDatabase.every(e => selectedIds.has(e.id))
+                              ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                          }`}>
+                            {ejerciciosDatabase.length > 0 && ejerciciosDatabase.every(e => selectedIds.has(e.id)) && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          Seleccionar todos
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Barra de acciones en grupo para database */}
+                    {esProfesor && modulo === 'ejercicio' && selectedIds.size > 0 && (
+                      <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+                        <span className="text-sm font-semibold">
+                          {selectedIds.size} ejercicio{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setModalFechasGrupo(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            <Calendar className="w-4 h-4" /> Asignar fechas
+                          </button>
+                          <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            <X className="w-4 h-4" /> Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-3">
-                      {databaseActual.metadata?.partidas?.map((partida) => {
+                      {databaseActual.metadata?.partidas?.map((partida: any) => {
+                        const ejData = modulo === 'ejercicio'
+                          ? ejerciciosDatabase.find(e => e.partida_index === partida.index)
+                          : null;
+
+                        // Para alumnos en modo ejercicio: ocultar partidas sin ejercicio asignado
+                        if (modulo === 'ejercicio' && !esProfesor && !ejData) return null;
+
                         const fake: Archivo = {
                           ...databaseActual,
-                          id: `${databaseActual.id}-p-${partida.index}`,
-                          nombre: `Partida ${partida.index + 1}`,
+                          id: ejData?.id ?? `${databaseActual.id}-p-${partida.index}`,
+                          nombre: partida.negras && partida.negras !== '?'
+                            ? `${partida.blancas} vs ${partida.negras}`
+                            : `Partida ${partida.index + 1}`,
                           metadata: { ...databaseActual.metadata, es_base_datos: false, partidas: [partida] },
+                          // NUEVO: metadata_ejercicio por partida individual
+                          metadata_ejercicio: ejData ? {
+                            id_ejercicio:      ejData.id,
+                            partida_index:     ejData.partida_index,
+                            fecha_inicio:      ejData.fecha_inicio,
+                            fecha_entrega:     ejData.fecha_entrega,
+                            solucion_pgn:      ejData.solucion_pgn,
+                            estado_alumno:     ejData.estado_alumno,
+                            puntuacion_alumno: ejData.puntuacion_alumno,
+                          } : undefined,
                         };
+
                         return (
                           <FilaPartida
-                            key={fake.id} archivo={fake} esProfesor={esProfesor}
-                            onClick={() => abrirPartidaDeDatabase(databaseActual, partida.index)}
+                            key={fake.id}
+                            archivo={fake}
+                            esProfesor={esProfesor}
+                            onClick={() => abrirPartidaDeDatabase(databaseActual, partida.index, ejData?.id)}
                             onToggleVisibilidad={() => toggleVisibilidadArchivo(databaseActual.id, databaseActual.visible)}
-                            onEliminar={() => alert('Para eliminar una partida específica, borra o actualiza el archivo PGN Database completo.')}
+                            onEliminar={() => alert('Para eliminar una partida, borra el archivo database completo.')}
+                            onFechaEntrega={modulo === 'ejercicio' && ejData && esProfesor
+                              ? () => setArchivoFechaEntrega(fake)
+                              : undefined
+                            }
+                            selected={ejData ? selectedIds.has(ejData.id) : false}
+                            onToggleSelect={esProfesor && modulo === 'ejercicio' && ejData
+                              ? () => toggleSelect(ejData.id)
+                              : undefined
+                            }
                           />
                         );
                       })}
                     </div>
                   </section>
+
                 ) : !tieneContenido ? (
                   <div className="py-20 flex flex-col items-center justify-center gap-4 text-center">
                     <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
@@ -450,6 +537,7 @@ export default function ExploradorArchivos({
                       <p className="text-sm text-slate-400 mt-1">{estamosEnRaiz ? 'Crea una carpeta para organizar el material.' : 'Sube archivos PGN o crea subcarpetas.'}</p>
                     </div>
                   </div>
+
                 ) : (
                   <>
                     {tieneSeccionSuperior && (
@@ -479,19 +567,14 @@ export default function ExploradorArchivos({
 
                     {carpetaId && (
                       <section>
-                        {/* Cabecera de sección con checkbox "seleccionar todos" */}
                         <div className="flex items-center justify-between mb-4">
                           <h2 className="text-xs font-bold text-slate-500 flex items-center gap-2 uppercase tracking-widest">
                             <FileText className="w-4 h-4 text-blue-500" /> Partidas Individuales
                           </h2>
                           {esProfesor && partidas.length > 0 && (
-                            <button
-                              onClick={seleccionarTodos}
-                              className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5"
-                            >
-                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                                todosSeleccionados ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
-                              }`}>
+                            <button onClick={seleccionarTodos}
+                              className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${todosSeleccionados ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
                                 {todosSeleccionados && (
                                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -503,35 +586,25 @@ export default function ExploradorArchivos({
                           )}
                         </div>
 
-                        {/* Barra de acciones en grupo */}
                         {esProfesor && selectedIds.size > 0 && (
                           <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
                             <span className="text-sm font-semibold">
                               {selectedIds.size} archivo{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
                             </span>
                             <div className="flex items-center gap-2 flex-wrap">
-                              {modulo === 'ejercicio' && (
-                                <button
-                                  onClick={() => setModalFechasGrupo(true)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
-                                >
+                              {modulo === 'ejercicio' && ejercicioIdsSeleccionados.length > 0 && (
+                                <button onClick={() => setModalFechasGrupo(true)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
                                   <Calendar className="w-4 h-4" /> Asignar fechas
                                 </button>
                               )}
-                              <button
-                                onClick={eliminarSeleccionados}
-                                disabled={eliminandoGrupo}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40"
-                              >
-                                {eliminandoGrupo
-                                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                                  : <Trash2 className="w-4 h-4" />}
+                              <button onClick={eliminarSeleccionados} disabled={eliminandoGrupo}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40">
+                                {eliminandoGrupo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                 Eliminar
                               </button>
-                              <button
-                                onClick={() => setSelectedIds(new Set())}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
-                              >
+                              <button onClick={() => setSelectedIds(new Set())}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
                                 <X className="w-4 h-4" /> Cancelar
                               </button>
                             </div>
@@ -575,10 +648,8 @@ export default function ExploradorArchivos({
       </div>
 
       {modalCarpeta && (
-        <ModalCrearCarpeta
-          claseId={claseId} carpetaPadreId={carpetaId ?? null} modulo={modulo}
-          onClose={() => setModalCarpeta(false)} onCreada={cargarDatos}
-        />
+        <ModalCrearCarpeta claseId={claseId} carpetaPadreId={carpetaId ?? null} modulo={modulo}
+          onClose={() => setModalCarpeta(false)} onCreada={cargarDatos} />
       )}
       {modalPgn && carpetaId && (
         modulo === 'ejercicio'
@@ -588,20 +659,24 @@ export default function ExploradorArchivos({
 
       {archivoFechaEntrega && (
         <ModalFechaEntrega
-          archivoId={archivoFechaEntrega.id}
+          archivoId={
+            modulo === 'ejercicio'
+              ? archivoFechaEntrega.metadata_ejercicio?.id_ejercicio ?? archivoFechaEntrega.id
+              : archivoFechaEntrega.id
+          }
           nombreEjercicio={archivoFechaEntrega.nombre}
           fechaInicioActual={archivoFechaEntrega.metadata_ejercicio?.fecha_inicio}
           fechaEntregaActual={archivoFechaEntrega.metadata_ejercicio?.fecha_entrega}
           onClose={() => setArchivoFechaEntrega(null)}
-          onGuardada={() => { setArchivoFechaEntrega(null); cargarDatos(); }}
+          onGuardada={() => { setArchivoFechaEntrega(null); cargarDatos(); recargarEjerciciosDatabase(); }}
         />
       )}
 
       {modalFechasGrupo && (
         <ModalFechasGrupo
-          archivoIds={[...selectedIds]}
+          ejercicioIds={ejercicioIdsSeleccionados}
           onClose={() => setModalFechasGrupo(false)}
-          onGuardado={() => { setModalFechasGrupo(false); setSelectedIds(new Set()); cargarDatos(); }}
+          onGuardado={() => { setModalFechasGrupo(false); setSelectedIds(new Set()); cargarDatos(); recargarEjerciciosDatabase(); }}
         />
       )}
     </div>
