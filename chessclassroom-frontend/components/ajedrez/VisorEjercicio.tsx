@@ -714,7 +714,11 @@ export default function VisorEjercicio({
             </div>
           ) : (
             respuestas.map(r => {
-              const cfg = ESTADO_CFG[r.estado as keyof typeof ESTADO_CFG] ?? ESTADO_CFG.NO_INICIADO;
+              const fechaVencida = fechaEntrega ? new Date() > new Date(fechaEntrega) : false;
+              const noCompletado = fechaVencida && r.estado !== 'COMPLETADO';
+              const cfg = noCompletado
+                ? { label: 'No completado', color: 'bg-red-100 text-red-700' }
+                : ESTADO_CFG[r.estado as keyof typeof ESTADO_CFG] ?? ESTADO_CFG.NO_INICIADO;
               const tiempo = formatTiempo(r.fecha_primer_acceso, r.fecha_completado, r.tiempo_acumulado);
               const pgnCargar = r.pgn_ultimo_movimiento ?? r.pgn_avanzado_correcto;
 
