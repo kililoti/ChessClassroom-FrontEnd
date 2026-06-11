@@ -393,8 +393,6 @@ export default function VisorEjercicio({
           const mismoComentario = comentarioSolucion.trim() === comentarioGuardado.trim();
           if (gameYaGuardado.history().join(' ') === gamePropuesto.history().join(' ') && mismoComentario) {
             alert('ℹ No hay cambios respecto a la solución ya guardada.');
-            setGrabando(false);
-            cargarPgn(pgnInicial);
             return;
           }
         }

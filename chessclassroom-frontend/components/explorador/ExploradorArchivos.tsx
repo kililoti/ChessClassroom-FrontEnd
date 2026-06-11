@@ -20,8 +20,6 @@ function getUsuario(): any {
   try { return JSON.parse(localStorage.getItem('usuario') ?? '{}'); } catch { return {}; }
 }
 
-// Modal Crear Carpeta
-
 function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada }: {
   claseId: string; carpetaPadreId: string | null; modulo: string;
   onClose: () => void; onCreada: () => void;
@@ -68,8 +66,6 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
   );
 }
 
-// Modal Asignar fechas en grupo
-
 function ModalFechasGrupo({ ejercicioIds, onClose, onGuardado }: {
   ejercicioIds: string[];
   onClose: () => void;
@@ -106,8 +102,6 @@ function ModalFechasGrupo({ ejercicioIds, onClose, onGuardado }: {
   );
 }
 
-// Tipos
-
 export interface ExploradorConfig {
   modulo: string;
   titulo: string;
@@ -121,8 +115,6 @@ export interface ExploradorConfig {
   rutaVolver?: string;
 }
 
-// Componente principal
-
 export default function ExploradorArchivos({
   modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida, chatSlot, noPadding = false, rutaVolver,
 }: ExploradorConfig & { noPadding?: boolean }) {
@@ -134,7 +126,6 @@ export default function ExploradorArchivos({
   const [archivos, setArchivos] = useState<Archivo[]>([]);
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; nombre: string }[]>([]);
   const [databaseActual, setDatabaseActual] = useState<Archivo | null>(null);
-
   const [ejerciciosDatabase, setEjerciciosDatabase] = useState<any[]>([]);
   const [cargando, setCargando] = useState(true);
   const [cargandoPgn, setCargandoPgn] = useState(false);
@@ -142,12 +133,10 @@ export default function ExploradorArchivos({
   const [modalCarpeta, setModalCarpeta] = useState(false);
   const [modalPgn, setModalPgn] = useState(false);
 
-  // Selección múltiple
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalFechasGrupo, setModalFechasGrupo] = useState(false);
-  const [eliminandoGrupo, setEliminandoGrupo] = useState(false);
+  const [mensajeBorrando, setMensajeBorrando] = useState<string | null>(null);
 
-  // Fecha individual
   const [archivoFechaEntrega, setArchivoFechaEntrega] = useState<Archivo | null>(null);
 
   const estamosEnRaiz = !carpetaId;
@@ -160,26 +149,24 @@ export default function ExploradorArchivos({
       .then(r => r.json()).then(d => { if (d.success) setBreadcrumbs(d.ancestros); }).catch(() => {});
   }, [carpetaId]);
 
-  // Recargar ejerciciosDatabase (llamado también tras guardar fechas)
   const recargarEjerciciosDatabase = () => {
-    if (!archivoId || modulo !== 'ejercicio') return;
-    fetch(`${API_EJ}/archivo/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
-      .then(r => r.json()).then(d => { if (d.success) setEjerciciosDatabase(d.ejercicios); }).catch(() => {});
+    if (!archivoId) return;
+    if (modulo === 'ejercicio') {
+      fetch(`${API_EJ}/archivo/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+        .then(r => r.json()).then(d => { if (d.success) setEjerciciosDatabase(d.ejercicios); }).catch(() => {});
+    }
+    fetch(`${API}/archivos/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+      .then(r => r.json()).then(d => { if (d.success) setDatabaseActual(d.archivo); }).catch(() => {});
   };
 
   useEffect(() => {
     if (!archivoId) { setDatabaseActual(null); setEjerciciosDatabase([]); return; }
     fetch(`${API}/archivos/${archivoId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
       .then(r => r.json()).then(d => { if (d.success) setDatabaseActual(d.archivo); }).catch(() => {});
-
     if (modulo === 'ejercicio') {
       recargarEjerciciosDatabase();
     }
   }, [archivoId, modulo]);
-
-  useEffect(() => {
-    if (claseId) cargarDatos();
-  }, [claseId, carpetaId]);
 
   const cargarDatos = async () => {
     setCargando(true); setError('');
@@ -192,7 +179,7 @@ export default function ExploradorArchivos({
       setCarpetas(datC.carpetas ?? []);
 
       if (carpetaId) {
-        const resA = await fetch(`${API}/archivos/carpeta/${carpetaId}`, { headers: h });
+        const resA = await fetch(`${API}/archivos/carpeta/${carpetaId}?modulo=${modulo}`, { headers: h });
         const datA = await resA.json();
         if (!resA.ok) throw new Error(datA.error || 'Error al cargar archivos');
         setArchivos(datA.archivos ?? []);
@@ -203,7 +190,11 @@ export default function ExploradorArchivos({
     finally { setCargando(false); }
   };
 
-  const entrarCarpeta = (id: string) => router.push(`${basePath}/${id}`);
+  useEffect(() => {
+    if (claseId) cargarDatos();
+  }, [claseId, carpetaId]);
+
+  const entrarCarpeta  = (id: string) => router.push(`${basePath}/${id}`);
   const entrarDatabase = (id: string) => router.push(`${basePath}/${carpetaId}/db/${id}`);
 
   const volverAtras = () => {
@@ -215,16 +206,16 @@ export default function ExploradorArchivos({
     } else { router.back(); }
   };
 
-  // Acciones individuales
-
   const eliminarCarpeta = async (id: string) => {
     if (!confirm('¿Eliminar esta carpeta y todo su contenido?')) return;
+    setMensajeBorrando('la carpeta');
     try {
       const res = await fetch(`${API}/carpetas/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       cargarDatos();
     } catch (e: any) { setError(e.message); }
+    finally { setMensajeBorrando(null); }
   };
 
   const toggleVisibilidadCarpeta = async (id: string, visible: boolean) => {
@@ -241,12 +232,86 @@ export default function ExploradorArchivos({
 
   const eliminarArchivo = async (id: string) => {
     if (!confirm('¿Eliminar este archivo de forma permanente?')) return;
+    setMensajeBorrando('el archivo');
     try {
       const res = await fetch(`${API}/archivos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setArchivos(prev => prev.filter(a => a.id !== id));
       setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+    } catch (e: any) { setError(e.message); }
+    finally { setMensajeBorrando(null); }
+  };
+
+  const eliminarEjercicioDeDatabase = async (ejercicioId: string) => {
+    if (!confirm('¿Eliminar esta partida? Se borrará del archivo PGN, se perderá el progreso de los alumnos y los índices del resto de partidas se actualizarán.')) return;
+    setMensajeBorrando('la partida y reindexando el archivo PGN');
+    try {
+      const res = await fetch(`${API_EJ}/${ejercicioId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      recargarEjerciciosDatabase();
+    } catch (e: any) { setError(e.message); }
+    finally { setMensajeBorrando(null); }
+  };
+
+  // Eliminar partida de database en modo estudio
+  const eliminarPartidaDeEstudio = async (partidaIndex: number) => {
+    if (!databaseActual) return;
+    if (!confirm('¿Eliminar esta partida del archivo PGN? Esta acción es irreversible.')) return;
+    setMensajeBorrando('la partida del archivo PGN');
+    try {
+      const res = await fetch(`${API}/archivos/${databaseActual.id}/partida/${partidaIndex}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      recargarEjerciciosDatabase();
+    } catch (e: any) { setError(e.message); }
+    finally { setMensajeBorrando(null); }
+  };
+
+  // Toggle visibilidad de ejercicio individual en database de ejercicio
+  const toggleVisibilidadEjercicioDeDatabase = async (ejercicioId: string) => {
+    try {
+      const res = await fetch(`${API_EJ}/${ejercicioId}/visibilidad`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      // Actualizar ejerciciosDatabase localmente
+      setEjerciciosDatabase(prev =>
+        prev.map(e => e.id === ejercicioId ? { ...e, visible: d.ejercicio.visible } : e)
+      );
+    } catch (e: any) { setError(e.message); }
+  };
+
+  // Toggle visibilidad de partida individual en database de estudio
+  const toggleVisibilidadPartidaDeEstudio = async (partidaIndex: number) => {
+    if (!databaseActual) return;
+    try {
+      const res = await fetch(`${API}/archivos/${databaseActual.id}/partida/${partidaIndex}/visibilidad`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      // Actualizar metadata local para reflejar el cambio sin recargar
+      setDatabaseActual(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          metadata: {
+            ...prev.metadata,
+            partidas_ocultas: d.partidas_ocultas ?? [],
+          },
+        };
+      });
     } catch (e: any) { setError(e.message); }
   };
 
@@ -259,6 +324,10 @@ export default function ExploradorArchivos({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setArchivos(prev => prev.map(a => a.id === id ? { ...a, visible: !visible } : a));
+      // Si es la database actual (vista interior), actualizar también su estado
+      if (databaseActual && databaseActual.id === id) {
+        setDatabaseActual(prev => prev ? { ...prev, visible: !visible } : prev);
+      }
     } catch (e: any) { setError(e.message); }
   };
 
@@ -291,8 +360,6 @@ export default function ExploradorArchivos({
     setTimeout(() => { onAbrirPartida(database, indexPartida); }, 50);
   };
 
-  // Selección múltiple
-
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -311,7 +378,7 @@ export default function ExploradorArchivos({
   const eliminarSeleccionados = async () => {
     const n = selectedIds.size;
     if (!confirm(`¿Eliminar ${n} archivo${n !== 1 ? 's' : ''} de forma permanente?`)) return;
-    setEliminandoGrupo(true);
+    setMensajeBorrando(`${n} archivo${n !== 1 ? 's' : ''}`);
     try {
       await Promise.all([...selectedIds].map(id =>
         fetch(`${API}/archivos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } })
@@ -319,7 +386,7 @@ export default function ExploradorArchivos({
       setArchivos(prev => prev.filter(a => !selectedIds.has(a.id)));
       setSelectedIds(new Set());
     } catch (e: any) { setError(e.message); }
-    finally { setEliminandoGrupo(false); }
+    finally { setMensajeBorrando(null); }
   };
 
   const databases = archivos.filter(a => a.metadata?.es_base_datos);
@@ -328,8 +395,6 @@ export default function ExploradorArchivos({
   const tieneContenido = tieneSeccionSuperior || partidas.length > 0;
   const todosSeleccionados = partidas.length > 0 && partidas.every(a => selectedIds.has(a.id));
 
-  // En vista database: selectedIds ya contiene ejercicio UUIDs directamente.
-  // En vista normal: mapear archivo_ids a ejercicio_ids via metadata_ejercicio.
   const ejercicioIdsSeleccionados = modulo === 'ejercicio'
     ? archivoId
       ? [...selectedIds]
@@ -352,7 +417,6 @@ export default function ExploradorArchivos({
 
       <div className="max-w-screen-2xl mx-auto">
 
-        {/* Cabecera */}
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0">
@@ -407,6 +471,13 @@ export default function ExploradorArchivos({
           </div>
         )}
 
+        {mensajeBorrando && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-medium shadow-sm animate-pulse">
+            <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+            <span>Eliminando {mensajeBorrando}... Por favor, espera.</span>
+          </div>
+        )}
+
         <div className={chatSlot ? 'grid grid-cols-1 lg:grid-cols-12 gap-8 items-start' : ''}>
           {chatSlot && (
             <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full">{chatSlot}</div>
@@ -423,26 +494,39 @@ export default function ExploradorArchivos({
 
                 {archivoId && databaseActual ? (
                   <section>
-                    {/* Cabecera con seleccionar todos (solo profesor en modo ejercicio) */}
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-xs font-bold text-slate-500 flex items-center gap-2 uppercase tracking-widest">
                         <FileText className="w-4 h-4 text-violet-500" />
                         {modulo === 'ejercicio' ? 'Ejercicios' : 'Partidas indexadas'} ({databaseActual.metadata?.partidas?.length ?? 0})
                       </h2>
-                      {esProfesor && modulo === 'ejercicio' && ejerciciosDatabase.length > 0 && (
+                      {esProfesor && (
+                        (modulo === 'ejercicio' && ejerciciosDatabase.length > 0) ||
+                        (modulo === 'estudio' && (databaseActual.metadata?.partidas?.length ?? 0) > 0)
+                      ) && (
                         <button
                           onClick={() => {
-                            const ids = ejerciciosDatabase.map(e => e.id);
-                            const todos = ids.every(id => selectedIds.has(id));
+                            const ids = modulo === 'ejercicio'
+                              ? ejerciciosDatabase.map(e => e.id)
+                              : (databaseActual.metadata?.partidas ?? []).map((p: any) => `p-${p.index}`);
+                            const todos = ids.every((id: string) => selectedIds.has(id));
                             setSelectedIds(todos ? new Set() : new Set(ids));
                           }}
                           className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5"
                         >
                           <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                            ejerciciosDatabase.length > 0 && ejerciciosDatabase.every(e => selectedIds.has(e.id))
-                              ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                            (() => {
+                              const ids = modulo === 'ejercicio'
+                                ? ejerciciosDatabase.map(e => e.id)
+                                : (databaseActual.metadata?.partidas ?? []).map((p: any) => `p-${p.index}`);
+                              return ids.length > 0 && ids.every((id: string) => selectedIds.has(id));
+                            })() ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
                           }`}>
-                            {ejerciciosDatabase.length > 0 && ejerciciosDatabase.every(e => selectedIds.has(e.id)) && (
+                            {(() => {
+                              const ids = modulo === 'ejercicio'
+                                ? ejerciciosDatabase.map(e => e.id)
+                                : (databaseActual.metadata?.partidas ?? []).map((p: any) => `p-${p.index}`);
+                              return ids.length > 0 && ids.every((id: string) => selectedIds.has(id));
+                            })() && (
                               <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
@@ -453,23 +537,76 @@ export default function ExploradorArchivos({
                       )}
                     </div>
 
-                    {/* Barra de acciones en grupo para database */}
-                    {esProfesor && modulo === 'ejercicio' && selectedIds.size > 0 && (
+                    {esProfesor && modulo === 'ejercicio' && selectedIds.size > 0 && !mensajeBorrando && (
                       <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
                         <span className="text-sm font-semibold">
                           {selectedIds.size} ejercicio{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
                         </span>
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setModalFechasGrupo(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
-                          >
+                          <button onClick={() => setModalFechasGrupo(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
                             <Calendar className="w-4 h-4" /> Asignar fechas
                           </button>
                           <button
-                            onClick={() => setSelectedIds(new Set())}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors"
-                          >
+                            onClick={async () => {
+                              const n = selectedIds.size;
+                              if (!confirm(`¿Eliminar ${n} partida${n !== 1 ? 's' : ''}? Se borrarán del archivo PGN y se perderá el progreso de los alumnos.`)) return;
+                              setMensajeBorrando(`${n} ejercicio${n !== 1 ? 's' : ''} y reindexando el archivo PGN`);
+                              try {
+                                const res = await fetch(`${API_EJ}/bloque`, {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                  body: JSON.stringify({ ids: [...selectedIds] }),
+                                });
+                                const d = await res.json();
+                                if (!res.ok) throw new Error(d.error);
+                                setSelectedIds(new Set());
+                                recargarEjerciciosDatabase();
+                              } catch (e: any) { setError(e.message); }
+                              finally { setMensajeBorrando(null); }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors">
+                            <Trash2 className="w-4 h-4" /> Eliminar
+                          </button>
+                          <button onClick={() => setSelectedIds(new Set())}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
+                            <X className="w-4 h-4" /> Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Barra de acciones en grupo para estudio */}
+                    {esProfesor && modulo === 'estudio' && selectedIds.size > 0 && !mensajeBorrando && (
+                      <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+                        <span className="text-sm font-semibold">
+                          {selectedIds.size} partida{selectedIds.size !== 1 ? 's' : ''} seleccionada{selectedIds.size !== 1 ? 's' : ''}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              const n = selectedIds.size;
+                              if (!confirm(`¿Eliminar ${n} partida${n !== 1 ? 's' : ''} del archivo PGN? Esta acción es irreversible.`)) return;
+                              setMensajeBorrando(`${n} partida${n !== 1 ? 's' : ''} del archivo PGN`);
+                              try {
+                                const indices = [...selectedIds].map(id => parseInt(id.replace('p-', ''), 10));
+                                const res = await fetch(`${API}/archivos/${databaseActual!.id}/partidas`, {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                                  body: JSON.stringify({ indices }),
+                                });
+                                const d = await res.json();
+                                if (!res.ok) throw new Error(d.error);
+                                setSelectedIds(new Set());
+                                recargarEjerciciosDatabase();
+                              } catch (e: any) { setError(e.message); }
+                              finally { setMensajeBorrando(null); }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors">
+                            <Trash2 className="w-4 h-4" /> Eliminar
+                          </button>
+                          <button onClick={() => setSelectedIds(new Set())}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
                             <X className="w-4 h-4" /> Cancelar
                           </button>
                         </div>
@@ -482,17 +619,25 @@ export default function ExploradorArchivos({
                           ? ejerciciosDatabase.find(e => e.partida_index === partida.index)
                           : null;
 
-                        // Para alumnos en modo ejercicio: ocultar partidas sin ejercicio asignado
                         if (modulo === 'ejercicio' && !esProfesor && !ejData) return null;
 
+                        // Para alumnos en estudio: ocultar partidas marcadas como ocultas
+                        const partidasOcultas: number[] = databaseActual.metadata?.partidas_ocultas ?? [];
+                        if (modulo === 'estudio' && !esProfesor && partidasOcultas.includes(partida.index)) return null;
+
+                        const esPartidaOculta = (databaseActual.metadata?.partidas_ocultas ?? []).includes(partida.index);
                         const fake: Archivo = {
                           ...databaseActual,
                           id: ejData?.id ?? `${databaseActual.id}-p-${partida.index}`,
+                          visible: modulo === 'ejercicio' && ejData
+                            ? ejData.visible ?? true
+                            : modulo === 'estudio'
+                              ? !esPartidaOculta
+                              : databaseActual.visible,
                           nombre: partida.negras && partida.negras !== '?'
                             ? `${partida.blancas} vs ${partida.negras}`
                             : `Partida ${partida.index + 1}`,
                           metadata: { ...databaseActual.metadata, es_base_datos: false, partidas: [partida] },
-                          // NUEVO: metadata_ejercicio por partida individual
                           metadata_ejercicio: ejData ? {
                             id_ejercicio:      ejData.id,
                             partida_index:     ejData.partida_index,
@@ -510,15 +655,34 @@ export default function ExploradorArchivos({
                             archivo={fake}
                             esProfesor={esProfesor}
                             onClick={() => abrirPartidaDeDatabase(databaseActual, partida.index, ejData?.id)}
-                            onToggleVisibilidad={() => toggleVisibilidadArchivo(databaseActual.id, databaseActual.visible)}
-                            onEliminar={() => alert('Para eliminar una partida, borra el archivo database completo.')}
+                            onToggleVisibilidad={
+                              modulo === 'estudio'
+                                ? () => toggleVisibilidadPartidaDeEstudio(partida.index)
+                                : modulo === 'ejercicio' && ejData
+                                  ? () => toggleVisibilidadEjercicioDeDatabase(ejData.id)
+                                  : () => toggleVisibilidadArchivo(databaseActual.id, databaseActual.visible)
+                            }
+                            // CAMBIO: onEliminar distingue modo ejercicio y modo estudio
+                            onEliminar={esProfesor
+                              ? modulo === 'ejercicio' && ejData
+                                ? () => eliminarEjercicioDeDatabase(ejData.id)
+                                : modulo === 'estudio'
+                                  ? () => eliminarPartidaDeEstudio(partida.index)
+                                  : undefined
+                              : undefined
+                            }
                             onFechaEntrega={modulo === 'ejercicio' && ejData && esProfesor
                               ? () => setArchivoFechaEntrega(fake)
                               : undefined
                             }
-                            selected={ejData ? selectedIds.has(ejData.id) : false}
-                            onToggleSelect={esProfesor && modulo === 'ejercicio' && ejData
-                              ? () => toggleSelect(ejData.id)
+                            selected={modulo === 'ejercicio'
+                              ? (ejData ? selectedIds.has(ejData.id) : false)
+                              : selectedIds.has(`p-${partida.index}`)
+                            }
+                            onToggleSelect={esProfesor && (
+                              (modulo === 'ejercicio' && ejData) || modulo === 'estudio'
+                            )
+                              ? () => toggleSelect(modulo === 'ejercicio' ? ejData!.id : `p-${partida.index}`)
                               : undefined
                             }
                           />
@@ -586,7 +750,7 @@ export default function ExploradorArchivos({
                           )}
                         </div>
 
-                        {esProfesor && selectedIds.size > 0 && (
+                        {esProfesor && selectedIds.size > 0 && !mensajeBorrando && (
                           <div className="mb-4 bg-blue-600 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
                             <span className="text-sm font-semibold">
                               {selectedIds.size} archivo{selectedIds.size !== 1 ? 's' : ''} seleccionado{selectedIds.size !== 1 ? 's' : ''}
@@ -598,10 +762,9 @@ export default function ExploradorArchivos({
                                   <Calendar className="w-4 h-4" /> Asignar fechas
                                 </button>
                               )}
-                              <button onClick={eliminarSeleccionados} disabled={eliminandoGrupo}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40">
-                                {eliminandoGrupo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                Eliminar
+                              <button onClick={eliminarSeleccionados}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors">
+                                <Trash2 className="w-4 h-4" /> Eliminar
                               </button>
                               <button onClick={() => setSelectedIds(new Set())}
                                 className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">

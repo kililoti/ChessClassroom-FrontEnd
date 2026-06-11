@@ -35,6 +35,7 @@ export interface Archivo {
       fecha: string;
       evento: string;
     }[];
+    partidas_ocultas?: number[];
   };
 }
 
@@ -44,7 +45,7 @@ export const CATEGORIA_LABELS: Record<Categoria, { label: string; color: string 
   estrategia: { label: 'Estrategia', color: 'bg-blue-100 text-blue-700' },
   final:      { label: 'Final',      color: 'bg-amber-100 text-amber-700' },
   partida:    { label: 'Partida',    color: 'bg-emerald-100 text-emerald-700' },
-  calculo:  { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
+  calculo:    { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
 };
 
 export function formatFecha(iso: string) {
@@ -61,7 +62,7 @@ export type EstadoEjercicio = 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
 
 export interface MetadataEjercicio {
   id_ejercicio?: string;
-  partida_index?: number; 
+  partida_index?: number;
   fecha_inicio?: string | null;
   fecha_entrega?: string | null;
   solucion_pgn?: string | null;
