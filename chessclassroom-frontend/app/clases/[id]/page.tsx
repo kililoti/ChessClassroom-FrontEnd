@@ -55,7 +55,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
   }
 
   const secciones = [
-    { titulo: 'Sala Virtual', ruta: `/clases/${clase.id}/sala-virtual`, icono: '💻', color: 'blue', desc: 'Pizarra interactiva y videollamada' },
+    { titulo: 'Aula Virtual', ruta: `/clases/${clase.id}/aula`, icono: '💻', color: 'blue', desc: 'Pizarra interactiva y videollamada' },
     { titulo: 'Estudio', ruta: `/clases/${clase.id}/estudios`, icono: '📚', color: 'indigo', desc: 'Archivos PDF, teoría y recursos' },
     { titulo: 'Ejercicios', ruta: `/clases/${clase.id}/ejercicios`, icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
     { titulo: 'Partidas', ruta: `/clases/${clase.id}/partidas`, icono: '♟️', color: 'amber', desc: 'Juega en vivo o revisa el historial' },
