@@ -194,7 +194,7 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="flex items-center gap-2">
             {vista === 'explorador' && (
-              <button onClick={() => setVista('principal')} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-500">
+              <button onClick={() => setVista('principal')} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 cursor-pointer">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
@@ -202,7 +202,7 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
               {vista === 'principal' ? 'Cargar partida' : `Mis ${modulo === 'estudio' ? 'estudios' : 'ejercicios'}`}
             </h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -296,13 +296,13 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => abrirExplorador('estudio')}
-                  className="flex items-center gap-2 p-3 border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all text-sm font-semibold text-slate-700"
+                  className="flex items-center gap-2 p-3 border-2 border-slate-200 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all text-sm font-semibold text-slate-700 cursor-pointer"
                 >
                   <span className="text-lg">📚</span> Estudios
                 </button>
                 <button
                   onClick={() => abrirExplorador('ejercicio')}
-                  className="flex items-center gap-2 p-3 border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 rounded-xl transition-all text-sm font-semibold text-slate-700"
+                  className="flex items-center gap-2 p-3 border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 rounded-xl transition-all text-sm font-semibold text-slate-700 cursor-pointer"
                 >
                   <span className="text-lg">🧩</span> Ejercicios
                 </button>
@@ -311,13 +311,13 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
 
             {/* Botones */}
             <div className="flex gap-2 justify-end pt-2 shrink-0">
-              <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
+              <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors cursor-pointer">
                 Cancelar
               </button>
               <button
                 onClick={handleCargar}
                 disabled={!puedeCargar || loadingId !== null}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
               >
                 {loadingId === 'archivo' && <Loader2 className="w-4 h-4 animate-spin" />}
                 Cargar partida
@@ -332,11 +332,11 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
 
             {/* Breadcrumbs */}
             <nav className="flex items-center gap-1 text-sm text-slate-500 font-medium mb-4 flex-wrap shrink-0">
-              <button onClick={navegarRaiz} className="hover:text-blue-600 transition-colors">Raíz</button>
+              <button onClick={navegarRaiz} className="hover:text-blue-600 transition-colors cursor-pointer">Raíz</button>
               {breadcrumbs.map((bc, i) => (
                 <span key={bc.id} className="flex items-center gap-1">
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  <button onClick={() => navegarBreadcrumb(i)} className="hover:text-blue-600 transition-colors">
+                  <button onClick={() => navegarBreadcrumb(i)} className="hover:text-blue-600 transition-colors cursor-pointer">
                     {bc.nombre}
                   </button>
                 </span>
@@ -344,7 +344,7 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
               {databaseActual && (
                 <span className="flex items-center gap-1">
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-slate-800 font-semibold">{databaseActual.nombre}</span>
+                  <span className="text-slate-800 font-semibold cursor-pointer">{databaseActual.nombre}</span>
                 </span>
               )}
             </nav>
@@ -364,15 +364,18 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
                     return (
                       <button
                         key={partida.index}
+                          title={partida.blancas && partida.negras
+                            ? `${partida.blancas} - ${partida.negras}`
+                            : `Partida ${partida.index + 1}`}
                         onClick={() => cargarPartidaDeArchivo(databaseActual.id, partida.index)}
                         disabled={loadingId !== null}
-                        className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-all text-left disabled:opacity-50"
+                        className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-all text-left disabled:opacity-50 cursor-pointer"
                       >
                         <FileText className="w-4 h-4 text-blue-500 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-800 truncate">
                             {partida.blancas && partida.negras
-                              ? `${partida.blancas} vs ${partida.negras}`
+                              ? `${partida.blancas} - ${partida.negras}`
                               : `Partida ${partida.index + 1}`}
                           </p>
                           {partida.resultado && (
@@ -395,7 +398,7 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
                     <button
                       key={carpeta.id}
                       onClick={() => entrarCarpeta(carpeta)}
-                      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl transition-all text-left"
+                      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl transition-all text-left cursor-pointer"
                     >
                       <span className="text-lg">📁</span>
                       <span className="text-sm font-semibold text-slate-800 flex-1">{carpeta.nombre}</span>
@@ -407,12 +410,13 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
                     return (
                       <button
                         key={arch.id}
+                        title={arch.nombre}
                         onClick={() => arch.metadata.es_base_datos
                           ? setDatabaseActual(arch)
                           : cargarPartidaDeArchivo(arch.id)
                         }
                         disabled={loadingId !== null}
-                        className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-all text-left disabled:opacity-50"
+                        className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-all text-left disabled:opacity-50 cursor-pointer"
                       >
                         {arch.metadata.es_base_datos
                           ? <span className="text-lg">🗃️</span>

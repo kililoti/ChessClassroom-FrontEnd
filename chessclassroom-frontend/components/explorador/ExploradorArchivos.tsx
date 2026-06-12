@@ -635,7 +635,7 @@ export default function ExploradorArchivos({
                               ? !esPartidaOculta
                               : databaseActual.visible,
                           nombre: partida.negras && partida.negras !== '?'
-                            ? `${partida.blancas} vs ${partida.negras}`
+                            ? `${partida.blancas} - ${partida.negras}`
                             : `Partida ${partida.index + 1}`,
                           metadata: { ...databaseActual.metadata, es_base_datos: false, partidas: [partida] },
                           metadata_ejercicio: ejData ? {
