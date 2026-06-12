@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useChessGame, MoveResult, getFenAtIndex } from '@/hooks/useChessGame';
+import { useChessGame, MoveResult } from '@/hooks/useChessGame';
 import { useAulaRealtime, EventoAula } from '@/hooks/useAulaRealtime';
 import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
@@ -13,6 +13,10 @@ export interface VistaAulaProps {
   esProfesor?: boolean;
   onCargarPartida?: () => void;
   onGuardar?: () => void;
+}
+
+function reproducirSonido(tipo: 'move' | 'capture') {
+  try { new Audio(`/sounds/${tipo}.mp3`).play().catch(() => {}); } catch {}
 }
 
 export default function VistaAula({
@@ -41,22 +45,15 @@ export default function VistaAula({
     setOrientacion(orientacionInicial);
   }, [orientacionInicial]);
 
-  // Cuando el profesor carga una nueva partida desde el modal,
-  // pgnInicial cambia y useChessGame lo recarga automáticamente.
-  // Pero se necesita emitir a los alumnos y persistirlo.
-  useEffect(() => {
-    if (!esProfesor || !pgnInicial) return;
-    emitir({ tipo: 'CARGA', pgn: pgnInicial, fen: '' });
-    persistirTablero(pgnInicial, '');
-  // Solo cuando cambia pgnInicial
-  }, [pgnInicial]);
-
   // Manejar eventos recibidos del canal (solo alumnos los aplican)
   const handleEvento = useCallback((evento: EventoAula) => {
     if (esProfesor) return;
 
     switch (evento.tipo) {
       case 'MOVIMIENTO':
+        cargarPgn(evento.pgn);
+        reproducirSonido(evento.sonido);
+        break;
       case 'CARGA':
       case 'REINICIO':
         cargarPgn(evento.pgn);
@@ -64,6 +61,7 @@ export default function VistaAula({
       case 'NAVEGAR':
         cargarPgn(evento.pgn);
         setTimeout(() => setIndiceVista(evento.indice), 0);
+        reproducirSonido(evento.sonido);
         break;
       case 'ORIENTACION':
         setOrientacion(evento.orientacion);
@@ -94,11 +92,19 @@ export default function VistaAula({
     }
   }, [aulaId]);
 
+  // Emitir y persistir cuando el profesor carga una nueva partida
+  // Va DESPUÉS de emitir y persistirTablero para que estén definidos
+  useEffect(() => {
+    if (!esProfesor || !pgnInicial) return;
+    emitir({ tipo: 'CARGA', pgn: pgnInicial, fen: '' });
+    persistirTablero(pgnInicial, '');
+  }, [pgnInicial, esProfesor, emitir, persistirTablero]);
+
   // Interceptar onPieceDrop para emitir y persistir tras movimiento
   const handlePieceDrop = useCallback((args: Parameters<typeof onPieceDrop>[0]): MoveResult => {
     const resultado = onPieceDrop(args);
     if (resultado.exito && esProfesor) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen });
+      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move' });
       persistirTablero(resultado.pgn, resultado.fen);
     }
     return resultado;
@@ -108,7 +114,7 @@ export default function VistaAula({
   const handlePromotionSelectAula = useCallback((piece: Parameters<typeof handlePromotionSelect>[0]) => {
     const resultado = handlePromotionSelect(piece);
     if (resultado.exito && esProfesor) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen });
+      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move' });
       persistirTablero(resultado.pgn, resultado.fen);
     }
   }, [handlePromotionSelect, esProfesor, emitir, persistirTablero]);
@@ -128,31 +134,38 @@ export default function VistaAula({
     persistirTablero('', fenInicial);
   };
 
+  // Sonido según índice
+  const sonidoDeIndice = useCallback((indice: number): 'move' | 'capture' => {
+    if (indice <= 0) return 'move';
+    const movimiento = historialMovimientos[indice - 1];
+    return movimiento?.captured ? 'capture' : 'move';
+  }, [historialMovimientos]);
+
   // Navegación planilla con emit
   const handleSetIndiceVista = useCallback((indice: number) => {
     setIndiceVista(indice);
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice });
-  }, [setIndiceVista, esProfesor, pgn, emitir]);
+    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice, sonido: sonidoDeIndice(indice) });
+  }, [setIndiceVista, esProfesor, pgn, emitir, sonidoDeIndice]);
 
   const handleIrAlInicio = useCallback(() => {
     irAlInicio();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: 0 });
+    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: 0, sonido: 'move' });
   }, [irAlInicio, esProfesor, pgn, emitir]);
 
   const handleIrAtras = useCallback(() => {
     irAtras();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.max(0, indiceVista - 1) });
-  }, [irAtras, esProfesor, pgn, indiceVista, emitir]);
+    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.max(0, indiceVista - 1), sonido: sonidoDeIndice(Math.max(0, indiceVista - 1)) });
+  }, [irAtras, esProfesor, pgn, indiceVista, emitir, sonidoDeIndice]);
 
   const handleIrAdelante = useCallback(() => {
     irAdelante();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.min(totalMoves, indiceVista + 1) });
-  }, [irAdelante, esProfesor, pgn, indiceVista, totalMoves, emitir]);
+    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.min(totalMoves, indiceVista + 1), sonido: sonidoDeIndice(Math.min(totalMoves, indiceVista + 1)) });
+  }, [irAdelante, esProfesor, pgn, indiceVista, totalMoves, emitir, sonidoDeIndice]);
 
   const handleIrAlFinal = useCallback(() => {
     irAlFinal();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: totalMoves });
-  }, [irAlFinal, esProfesor, pgn, totalMoves, emitir]);
+    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: totalMoves, sonido: sonidoDeIndice(totalMoves) });
+  }, [irAlFinal, esProfesor, pgn, totalMoves, emitir, sonidoDeIndice]);
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">

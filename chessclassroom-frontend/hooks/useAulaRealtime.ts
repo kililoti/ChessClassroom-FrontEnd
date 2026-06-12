@@ -2,8 +2,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 export type EventoAula =
-  | { tipo: 'MOVIMIENTO';  pgn: string; fen: string }
-  | { tipo: 'NAVEGAR';     pgn: string; indice: number }
+  | { tipo: 'MOVIMIENTO';  pgn: string; fen: string; sonido: 'move' | 'capture' }
+  | { tipo: 'NAVEGAR';     pgn: string; indice: number; sonido: 'move' | 'capture' }
   | { tipo: 'ORIENTACION'; orientacion: 'white' | 'black' }
   | { tipo: 'REINICIO';    pgn: string; fen: string }
   | { tipo: 'CARGA';       pgn: string; fen: string };

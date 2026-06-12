@@ -81,6 +81,7 @@ export interface MoveResult {
   exito: boolean;
   pgn: string;
   fen: string;
+  captura: boolean;
 }
 
 export interface UseChessGameOptions {
@@ -164,7 +165,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
         : buildGameAtIndex(pgn, indiceVista);
 
       const move = gameEnPunto.move({ from, to, promotion });
-      if (!move) return { exito: false, pgn: '', fen: '' };
+      if (!move) return { exito: false, pgn: '', fen: '', captura: false };
 
       reproducirSonido(move.captured ? 'capture' : 'move');
       const nuevoPgn = gameEnPunto.pgn();
@@ -172,8 +173,8 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
       setPgn(nuevoPgn);
       setTotalMoves(indiceVista + 1);
       setIndiceVista(indiceVista + 1);
-      return { exito: true, pgn: nuevoPgn, fen: nuevoFen };
-    } catch { return { exito: false, pgn: '', fen: '' }; }
+      return { exito: true, pgn: nuevoPgn, fen: nuevoFen, captura: !!move.captured };
+    } catch { return { exito: false, pgn: '', fen: '', captura: false }; }
   }, [pgn, indiceVista, estamosEnElPresente]);
 
   const onPieceDrop = useCallback((args: {
@@ -182,13 +183,13 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
     targetSquare: string | null;
   }): MoveResult => {
     const { sourceSquare, targetSquare } = args;
-    if (!targetSquare) return { exito: false, pgn: '', fen: '' };
+    if (!targetSquare) return { exito: false, pgn: '', fen: '', captura: false };
     setCasillasInt({});
 
     const gameEnPunto = estamosEnElPresente ? gameRef.current : buildGameAtIndex(pgn, indiceVista);
     const movLegales  = gameEnPunto.moves({ verbose: true }) as any[];
     const esLegal     = movLegales.some(m => m.from === sourceSquare && m.to === targetSquare);
-    if (!esLegal) return { exito: false, pgn: '', fen: '' };
+    if (!esLegal) return { exito: false, pgn: '', fen: '', captura: false };
 
     const pieza       = gameEnPunto.get(sourceSquare as any);
     const esPromocion = pieza?.type === 'p' &&
@@ -197,7 +198,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
 
     if (esPromocion) {
       setPendingPromotion({ from: sourceSquare, to: targetSquare, color: pieza!.color as 'w' | 'b' });
-      return { exito: false, pgn: '', fen: '' };
+      return { exito: false, pgn: '', fen: '', captura: false };
     }
 
     return aplicarMovimiento(sourceSquare, targetSquare, 'q');
@@ -226,7 +227,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
   const onSquareClick = useCallback(() => setCasillasInt({}), []);
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece): MoveResult => {
-    if (!pendingPromotion) return { exito: false, pgn: '', fen: '' };
+    if (!pendingPromotion) return { exito: false, pgn: '', fen: '', captura: false };
     const resultado = aplicarMovimiento(pendingPromotion.from, pendingPromotion.to, piece);
     setPendingPromotion(null);
     setCasillasInt({});
