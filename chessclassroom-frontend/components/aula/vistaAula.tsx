@@ -13,6 +13,7 @@ export interface VistaAulaProps {
   esProfesor?: boolean;
   onCargarPartida?: () => void;
   onGuardar?: () => void;
+  onPgnChange?: (pgn: string) => void;
 }
 
 function reproducirSonido(tipo: 'move' | 'capture') {
@@ -25,6 +26,7 @@ export default function VistaAula({
   esProfesor = false,
   onCargarPartida,
   onGuardar,
+  onPgnChange,
 }: VistaAulaProps) {
   const [orientacion, setOrientacion] = useState<'white' | 'black'>('white');
 
@@ -44,6 +46,10 @@ export default function VistaAula({
   useEffect(() => {
     setOrientacion(orientacionInicial);
   }, [orientacionInicial]);
+
+  useEffect(() => {
+  onPgnChange?.(pgn);
+}, [pgn, onPgnChange]);
 
   // Manejar eventos recibidos del canal (solo alumnos los aplican)
   const handleEvento = useCallback((evento: EventoAula) => {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ChatContainer from '@/components/chat/ChatContainer';
 import VistaAula from '@/components/aula/vistaAula';
 import ModalCargarPartida from '@/components/aula/ModalCargarPartida';
+import ModalGuardarPartida from '@/components/aula/ModalGuardarPartida';
 
 interface DatosAula {
   id: string;
@@ -39,6 +40,8 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [pgnCargado, setPgnCargado] = useState('');
   const [modalCargar, setModalCargar] = useState(false);
+  const [modalGuardar, setModalGuardar] = useState(false);
+  const [pgnActual, setPgnActual] = useState('');
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -66,6 +69,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
       setClase({ id: dataClase.id, nombre: dataClase.nombre, tipo: dataClase.tipo });
       setAula(dataAula);
       setPgnCargado(dataAula.pgn_actual ?? '');
+      setPgnActual(dataAula.pgn_actual ?? '');
 
       const resChats = await fetch(`http://localhost:3001/api/chats`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -119,6 +123,16 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
             setPgnCargado(pgn);
             setModalCargar(false);
           }}
+        />
+      )}
+
+      {/* Modal guardar partida */}
+      {modalGuardar && (
+        <ModalGuardarPartida
+          claseId={claseId}
+          pgn={pgnActual}
+          onClose={() => setModalGuardar(false)}
+          onGuardado={() => setModalGuardar(false)}
         />
       )}
 
@@ -187,7 +201,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
                     Nadie conectado aún
                   </div>
                 </div>
-                <button className="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
+                <button className="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/>
@@ -206,7 +220,8 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
               pgnInicial={pgnCargado}
               esProfesor={esProfesor}
               onCargarPartida={() => setModalCargar(true)}
-              onGuardar={() => console.log('TODO: modal guardar')}
+              onGuardar={() => setModalGuardar(true)}
+              onPgnChange={setPgnActual}
             />
           </div>
 
