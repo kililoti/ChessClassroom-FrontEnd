@@ -18,7 +18,6 @@ export const STYLE_MOVE_CAPTURE: React.CSSProperties = { background: 'radial-gra
 export const STYLE_LAST_MOVE: React.CSSProperties    = { backgroundColor: 'rgba(59,130,246,0.35)' };
 export const STYLE_CHECK: React.CSSProperties        = { background: 'radial-gradient(circle, rgba(239,68,68,0.9) 40%, transparent 44%)' };
 
-// Extrae el FEN del header [FEN "..."] de un PGN, si existe.
 function extraerFenHeader(pgn: string): string | null {
   return pgn?.match(/\[FEN "([^"]+)"\]/)?.[1] ?? null;
 }
@@ -34,9 +33,7 @@ export function buildGameAtIndex(pgn: string, index: number): Chess {
 }
 
 export function getFenAtIndex(pgn: string, index: number, totalMoves: number): string {
-  if (index === 0) {
-    return extraerFenHeader(pgn) ?? FEN_INICIAL;
-  }
+  if (index === 0) return extraerFenHeader(pgn) ?? FEN_INICIAL;
   if (index === totalMoves) {
     const g = new Chess();
     if (pgn) { try { g.loadPgn(pgn); } catch {} }
@@ -80,6 +77,12 @@ export function calcularEstilosBase(
   return styles;
 }
 
+export interface MoveResult {
+  exito: boolean;
+  pgn: string;
+  fen: string;
+}
+
 export interface UseChessGameOptions {
   pgnInicial?: string;
 }
@@ -91,12 +94,10 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
   const [casillasBase, setCasillasBase] = useState<Record<string, React.CSSProperties>>({});
   const [casillasInt, setCasillasInt]   = useState<Record<string, React.CSSProperties>>({});
   const [pendingPromotion, setPendingPromotion] = useState<PendingPromotion | null>(null);
-
   const [orientacionInicial, setOrientacionInicial] = useState<'white' | 'black'>('white');
 
   const gameRef = useRef<Chess>(new Chess());
 
-  // Carga inicial
   useEffect(() => {
     if (!pgnInicial) return;
     const temp    = new Chess();
@@ -119,12 +120,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
       setPgn(temp.pgn());
       setTotalMoves(len);
       setIndiceVista(len);
-
-      if (len > 0) {
-        setOrientacionInicial(temp.turn() === 'w' ? 'white' : 'black');
-      } else {
-        setOrientacionInicial('white');
-      }
+      setOrientacionInicial(len > 0 ? (temp.turn() === 'w' ? 'white' : 'black') : 'white');
     }
   }, [pgnInicial]);
 
@@ -161,35 +157,38 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
   });
   const irAlFinal = () => { if (indiceVista < totalMoves) { reproducirSonido('move'); setIndiceVista(totalMoves); } };
 
-  const aplicarMovimiento = useCallback((from: string, to: string, promotion: PromotionPiece): boolean => {
+  const aplicarMovimiento = useCallback((from: string, to: string, promotion: PromotionPiece): MoveResult => {
     try {
       const gameEnPunto = estamosEnElPresente
         ? (() => { const g = new Chess(); try { g.loadPgn(gameRef.current.pgn()); } catch {} return g; })()
         : buildGameAtIndex(pgn, indiceVista);
 
       const move = gameEnPunto.move({ from, to, promotion });
-      if (!move) return false;
+      if (!move) return { exito: false, pgn: '', fen: '' };
 
       reproducirSonido(move.captured ? 'capture' : 'move');
-      setPgn(gameEnPunto.pgn());
+      const nuevoPgn = gameEnPunto.pgn();
+      const nuevoFen = gameEnPunto.fen();
+      setPgn(nuevoPgn);
       setTotalMoves(indiceVista + 1);
       setIndiceVista(indiceVista + 1);
-      return true;
-    } catch { return false; }
+      return { exito: true, pgn: nuevoPgn, fen: nuevoFen };
+    } catch { return { exito: false, pgn: '', fen: '' }; }
   }, [pgn, indiceVista, estamosEnElPresente]);
 
-  const onPieceDrop = useCallback(({ sourceSquare, targetSquare }: {
+  const onPieceDrop = useCallback((args: {
     piece: { isSparePiece: boolean; pieceType: string; position: string };
     sourceSquare: string;
     targetSquare: string | null;
-  }): boolean => {
-    if (!targetSquare) return false;
+  }): MoveResult => {
+    const { sourceSquare, targetSquare } = args;
+    if (!targetSquare) return { exito: false, pgn: '', fen: '' };
     setCasillasInt({});
 
     const gameEnPunto = estamosEnElPresente ? gameRef.current : buildGameAtIndex(pgn, indiceVista);
     const movLegales  = gameEnPunto.moves({ verbose: true }) as any[];
     const esLegal     = movLegales.some(m => m.from === sourceSquare && m.to === targetSquare);
-    if (!esLegal) return false;
+    if (!esLegal) return { exito: false, pgn: '', fen: '' };
 
     const pieza       = gameEnPunto.get(sourceSquare as any);
     const esPromocion = pieza?.type === 'p' &&
@@ -198,7 +197,7 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
 
     if (esPromocion) {
       setPendingPromotion({ from: sourceSquare, to: targetSquare, color: pieza!.color as 'w' | 'b' });
-      return false;
+      return { exito: false, pgn: '', fen: '' };
     }
 
     return aplicarMovimiento(sourceSquare, targetSquare, 'q');
@@ -226,11 +225,12 @@ export function useChessGame({ pgnInicial = '' }: UseChessGameOptions = {}) {
 
   const onSquareClick = useCallback(() => setCasillasInt({}), []);
 
-  const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
-    if (!pendingPromotion) return;
-    aplicarMovimiento(pendingPromotion.from, pendingPromotion.to, piece);
+  const handlePromotionSelect = useCallback((piece: PromotionPiece): MoveResult => {
+    if (!pendingPromotion) return { exito: false, pgn: '', fen: '' };
+    const resultado = aplicarMovimiento(pendingPromotion.from, pendingPromotion.to, piece);
     setPendingPromotion(null);
     setCasillasInt({});
+    return resultado;
   }, [pendingPromotion, aplicarMovimiento]);
 
   const handlePromotionCancel = useCallback(() => {
