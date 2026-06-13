@@ -25,6 +25,7 @@ interface LiveKitContextType {
   toggleEnsordecido: () => void;
   mutearParticipante: (identity: string, muted: boolean) => Promise<void>;
   expulsarParticipante: (identity: string) => Promise<void>;
+  setVolumenParticipante: (identity: string, volumen: number) => void;
   error: string;
 }
 
@@ -36,9 +37,14 @@ export function useLiveKit() {
   return ctx;
 }
 
-export function LiveKitProvider({ children }: { children: React.ReactNode }) {
+export function LiveKitProvider({
+  children,
+  onSalir
+}: {
+  children: React.ReactNode;
+  onSalir?: () => void;
+}) {
   const roomRef = useRef<Room | null>(null);
-  // Ref para saber si el mute lo hizo el propio usuario
   const muteandoYoMismoRef = useRef(false);
 
   const [conectado, setConectado] = useState(false);
@@ -108,7 +114,6 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         if (participant.identity === room.localParticipant.identity) {
           if (pub.kind === Track.Kind.Audio) {
             setMicActivo(false);
-            // Si el mute NO lo hizo el propio usuario, fue el servidor (profesor)
             if (!muteandoYoMismoRef.current) {
               setMuteadoPorProfesor(true);
             }
@@ -127,11 +132,12 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         actualizarParticipantes();
       });
 
-      // Audio
-      room.on(RoomEvent.TrackSubscribed, (track) => {
+      room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
         if (track.kind === Track.Kind.Audio) {
           const el = track.attach() as HTMLAudioElement;
           el.setAttribute('data-livekit-audio', 'true');
+          // Guardar identity para control de volumen individual
+          el.setAttribute('data-identity', participant.identity);
           if (ensordecido) el.volume = 0;
           document.body.appendChild(el);
         }
@@ -143,7 +149,6 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      // Mensajes del profesor
       room.on(RoomEvent.DataReceived, (data: Uint8Array) => {
         try {
           const msg = JSON.parse(new TextDecoder().decode(data));
@@ -170,6 +175,7 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         setMuteadoPorProfesor(false);
         setEnsordecido(false);
         roomRef.current = null;
+        onSalir?.();
       });
 
       await room.connect(data.serverUrl, data.token);
@@ -191,7 +197,7 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setConectando(false);
     }
-  }, [conectado, conectando, actualizarParticipantes, ensordecido]);
+  }, [conectado, conectando, actualizarParticipantes, ensordecido, onSalir]);
 
   const salir = useCallback(() => {
     document.querySelectorAll('[data-livekit-audio]').forEach(el => el.remove());
@@ -203,7 +209,8 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
     setMicActivo(true);
     setMuteadoPorProfesor(false);
     setEnsordecido(false);
-  }, []);
+    onSalir?.();
+  }, [onSalir]);
 
   const toggleMic = useCallback(async () => {
     const room = roomRef.current;
@@ -266,6 +273,12 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Control de volumen individual por participante
+  const setVolumenParticipante = useCallback((identity: string, volumen: number) => {
+    const el = document.querySelector(`[data-identity="${identity}"]`) as HTMLAudioElement | null;
+    if (el) el.volume = Math.max(0, Math.min(1, volumen));
+  }, []);
+
   useEffect(() => {
     return () => {
       document.querySelectorAll('[data-livekit-audio]').forEach(el => el.remove());
@@ -278,7 +291,8 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
       conectado, conectando, micActivo, muteadoPorProfesor,
       ensordecido, participantesVoz, aulaId,
       unirse, salir, toggleMic, toggleEnsordecido,
-      mutearParticipante, expulsarParticipante, error
+      mutearParticipante, expulsarParticipante,
+      setVolumenParticipante, error
     }}>
       {children}
     </LiveKitContext.Provider>

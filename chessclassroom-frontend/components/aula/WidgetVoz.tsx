@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useLiveKit } from '@/contexts/LiveKitContext';
 
 function IconMic({ activo }: { activo: boolean }) {
@@ -41,9 +42,10 @@ function BarrasVoz({ hablando }: { hablando: boolean }) {
 }
 
 export default function WidgetVoz() {
+  const pathname = usePathname();
   const {
-    conectado, micActivo, muteadoPorProfesor, ensordecido,
-    participantesVoz, salir, toggleMic, toggleEnsordecido
+    conectado, micActivo, muteadoPorProfesor,
+    participantesVoz, salir, toggleMic
   } = useLiveKit();
 
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -99,20 +101,21 @@ export default function WidgetVoz() {
     };
   }, []);
 
-  if (!conectado || !pos) return null;
+  // No mostrar si no está conectado, no tiene posición, o está en la página del aula
+  if (!conectado || !pos || pathname.includes('/aula')) return null;
 
   const yo = participantesVoz.find(p => p.isLocal);
   const micBloqueado = muteadoPorProfesor;
   const micVisible = micActivo && !muteadoPorProfesor;
   const silenciado = !micActivo || muteadoPorProfesor;
-  const bordeColor = yo?.isSpeaking ? '#22c55e' : silenciado ? '#ef4444' : ensordecido ? '#f59e0b' : '#e2e8f0';
-  const bgAvatar = yo?.isSpeaking ? '#dcfce7' : silenciado ? '#fee2e2' : ensordecido ? '#fef3c7' : '#eff6ff';
-  const colorAvatar = yo?.isSpeaking ? '#15803d' : silenciado ? '#b91c1c' : ensordecido ? '#b45309' : '#1d4ed8';
+
+  const bordeColor = yo?.isSpeaking && !silenciado ? '#22c55e' : silenciado ? '#ef4444' : '#e2e8f0';
+  const bgAvatar = yo?.isSpeaking && !silenciado ? '#dcfce7' : silenciado ? '#fee2e2' : '#eff6ff';
+  const colorAvatar = yo?.isSpeaking && !silenciado ? '#15803d' : silenciado ? '#b91c1c' : '#1d4ed8';
 
   const estadoTexto = () => {
     if (muteadoPorProfesor) return 'Muteado por el profesor';
     if (!micActivo) return 'Micrófono silenciado';
-    if (ensordecido) return 'Audio silenciado';
     if (yo?.isSpeaking) return 'Hablando...';
     return 'Conectado';
   };
@@ -138,14 +141,20 @@ export default function WidgetVoz() {
       {/* Cabecera arrastrable */}
       <div
         onMouseDown={onMouseDown}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', cursor: 'grab' }}
+        style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '10px', cursor: 'grab'
+        }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>Sala de voz</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>{participantesVoz.length} conectados</span>
+          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+            {participantesVoz.length} conectados
+          </span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8">
             <circle cx="8" cy="8" r="1.5"/><circle cx="16" cy="8" r="1.5"/>
             <circle cx="8" cy="16" r="1.5"/><circle cx="16" cy="16" r="1.5"/>
@@ -157,12 +166,12 @@ export default function WidgetVoz() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
         padding: '6px 8px', borderRadius: '10px',
-        background: yo?.isSpeaking ? '#f0fdf4' : silenciado ? '#fef2f2' : ensordecido ? '#fffbeb' : '#f8fafc',
-        border: `1px solid ${yo?.isSpeaking ? '#bbf7d0' : silenciado ? '#fecaca' : ensordecido ? '#fde68a' : '#e2e8f0'}`,
+        background: yo?.isSpeaking && !silenciado ? '#f0fdf4' : silenciado ? '#fef2f2' : '#f8fafc',
+        border: `1px solid ${yo?.isSpeaking && !silenciado ? '#bbf7d0' : silenciado ? '#fecaca' : '#e2e8f0'}`,
         marginBottom: '10px'
       }}>
         <div style={{ position: 'relative', width: '30px', height: '30px', flexShrink: 0 }}>
-          {yo?.isSpeaking && (
+          {yo?.isSpeaking && !silenciado && (
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '50%',
               background: '#22c55e', opacity: 0.3,
@@ -174,7 +183,7 @@ export default function WidgetVoz() {
             background: bgAvatar, color: colorAvatar,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '10px', fontWeight: 600, position: 'relative', zIndex: 1,
-            outline: yo?.isSpeaking ? '2px solid #22c55e' : 'none',
+            outline: yo?.isSpeaking && !silenciado ? '2px solid #22c55e' : 'none',
             outlineOffset: '2px'
           }}>
             {yo?.nombre?.slice(0, 2).toUpperCase() ?? 'YO'}
@@ -182,10 +191,17 @@ export default function WidgetVoz() {
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: '12px', fontWeight: 600, margin: 0, color: yo?.isSpeaking ? '#15803d' : silenciado ? '#b91c1c' : ensordecido ? '#b45309' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <p style={{
+            fontSize: '12px', fontWeight: 600, margin: 0,
+            color: yo?.isSpeaking && !silenciado ? '#15803d' : silenciado ? '#b91c1c' : '#0f172a',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+          }}>
             {yo?.nombre ?? 'Tú'}
           </p>
-          <p style={{ fontSize: '11px', margin: 0, color: yo?.isSpeaking ? '#16a34a' : silenciado ? '#dc2626' : ensordecido ? '#d97706' : '#64748b' }}>
+          <p style={{
+            fontSize: '11px', margin: 0,
+            color: yo?.isSpeaking && !silenciado ? '#16a34a' : silenciado ? '#dc2626' : '#64748b'
+          }}>
             {estadoTexto()}
           </p>
         </div>
@@ -195,7 +211,7 @@ export default function WidgetVoz() {
 
       {/* Controles */}
       <div style={{ display: 'flex', gap: '6px' }}>
-        {/* Mic — bloqueado si muteado por profesor */}
+        {/* Mic */}
         <button
           onClick={toggleMic}
           disabled={micBloqueado}
@@ -211,26 +227,6 @@ export default function WidgetVoz() {
           }}
         >
           <IconMic activo={micVisible} />
-        </button>
-
-        {/* Auriculares */}
-        <button
-          onClick={toggleEnsordecido}
-          title={ensordecido ? 'Activar audio' : 'Silenciar audio'}
-          style={{
-            flex: 1, padding: '6px', borderRadius: '8px', cursor: 'pointer',
-            background: ensordecido ? '#fef3c7' : '#f1f5f9',
-            color: ensordecido ? '#b45309' : '#475569',
-            border: `0.5px solid ${ensordecido ? '#fde68a' : '#e2e8f0'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-            {ensordecido
-              ? <><path d="M12 1C7.03 1 3 5.03 3 10v4c0 1.1.9 2 2 2h1v-6H4v-1c0-4.42 3.58-8 8-8s8 3.58 8 8v1h-2v6h1c1.1 0 2-.9 2-2v-4c0-4.97-4.03-9-9-9zM9 14H7v4h2v-4zm8 0h-2v4h2v-4z"/><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></>
-              : <path d="M12 1C7.03 1 3 5.03 3 10v4c0 1.1.9 2 2 2h1v-6H4v-1c0-4.42 3.58-8 8-8s8 3.58 8 8v1h-2v6h1c1.1 0 2-.9 2-2v-4c0-4.97-4.03-9-9-9zM9 14H7v4h2v-4zm8 0h-2v4h2v-4z"/>
-            }
-          </svg>
         </button>
 
         {/* Salir */}

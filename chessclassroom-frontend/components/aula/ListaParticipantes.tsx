@@ -1,7 +1,7 @@
 'use client';
 
 import { useLiveKit } from '@/contexts/LiveKitContext';
-import { PresenciaUsuario } from '@/hooks/useAulaPresencia';
+import { PresenciaUsuario } from '@/contexts/PresenciaContext';
 
 interface PermisosTablero {
   alumno_id: string;
@@ -25,9 +25,8 @@ function getToken() {
 export default function ListaParticipantes({
   aulaId, presentes, esProfesor, permisos, onPermisosChange, onEmitirPermiso
 }: Props) {
-  const { participantesVoz, mutearParticipante, expulsarParticipante } = useLiveKit();
+  const { participantesVoz } = useLiveKit();
 
-  // Si el usuario está en voz, usar LiveKit (fiable). Si no, usar broadcast de presencia.
   const estaEnVoz = (id: string) => {
     if (participantesVoz.length > 0) {
       return participantesVoz.some(p => p.identity === id);
@@ -77,9 +76,6 @@ export default function ListaParticipantes({
     const muteado  = estaMuteado(p.usuario_id);
     const permisosP = p.rol === 'alumno' ? getPermisos(p.usuario_id) : null;
 
-    // Solo mostrar controles de voz si el usuario local está en la sala
-    const localEnVoz = participantesVoz.length > 0;
-
     return (
       <div
         key={p.usuario_id}
@@ -95,9 +91,11 @@ export default function ListaParticipantes({
               <div className="absolute inset-0 rounded-full bg-green-400 opacity-30 animate-ping" />
             )}
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold relative z-10 ${
-              hablando ? 'bg-green-100 text-green-700 outline outline-2 outline-green-400 outline-offset-1' :
-              enVoz    ? 'bg-blue-100 text-blue-700' :
-                         'bg-slate-200 text-slate-600'
+              hablando
+                ? 'bg-green-100 text-green-700 outline outline-2 outline-green-400 outline-offset-1'
+                : enVoz
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-slate-200 text-slate-600'
             }`}>
               {p.nombre.slice(0, 1)}{p.apellidos.slice(0, 1)}
             </div>
@@ -133,61 +131,31 @@ export default function ListaParticipantes({
           </div>
         </div>
 
-        {/* Controles profesor */}
-        {esProfesor && !esYo && (
-          <div className="flex flex-col gap-1.5">
-
-            {/* Permisos tablero — solo alumnos */}
-            {p.rol === 'alumno' && permisosP && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => togglePermiso(p.usuario_id, 'blancas')}
-                  title="Permiso mover blancas"
-                  className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
-                    permisosP.puede_mover_blancas
-                      ? 'bg-slate-800 text-white border-slate-800'
-                      : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  ♙ B
-                </button>
-                <button
-                  onClick={() => togglePermiso(p.usuario_id, 'negras')}
-                  title="Permiso mover negras"
-                  className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
-                    permisosP.puede_mover_negras
-                      ? 'bg-slate-800 text-white border-slate-800'
-                      : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  ♟ N
-                </button>
-              </div>
-            )}
-
-            {/* Controles voz — solo si el profesor está en la sala Y el alumno también */}
-            {localEnVoz && enVoz && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => mutearParticipante(p.usuario_id, !muteado)}
-                  className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${
-                    muteado
-                      ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
-                      : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                  }`}
-                >
-                  {muteado ? '🎙️ Desmutear' : '🔇 Mutear'}
-                </button>
-                <button
-                  onClick={() => expulsarParticipante(p.usuario_id)}
-                  title="Expulsar de la sala de voz"
-                  className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-colors"
-                >
-                  ✕ Expulsar
-                </button>
-              </div>
-            )}
-
+        {/* Permisos tablero — solo profesor sobre alumnos */}
+        {esProfesor && !esYo && p.rol === 'alumno' && permisosP && (
+          <div className="flex gap-1">
+            <button
+              onClick={() => togglePermiso(p.usuario_id, 'blancas')}
+              title="Permiso mover blancas"
+              className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
+                permisosP.puede_mover_blancas
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+              }`}
+            >
+              ♙ B
+            </button>
+            <button
+              onClick={() => togglePermiso(p.usuario_id, 'negras')}
+              title="Permiso mover negras"
+              className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
+                permisosP.puede_mover_negras
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+              }`}
+            >
+              ♟ N
+            </button>
           </div>
         )}
       </div>
@@ -201,20 +169,26 @@ export default function ListaParticipantes({
           <span className="text-xl">👥</span>
           <h2 className="font-bold text-slate-800">Participantes</h2>
         </div>
-        <span className="text-xs text-slate-400 font-medium">{presentes.length} conectados</span>
+        <span className="text-xs text-slate-400 font-medium">
+          {presentes.length} en el aula
+        </span>
       </div>
 
       <div className="p-3 flex flex-col gap-3 max-h-[600px] overflow-y-auto">
         {profesores.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Profesores</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+              Profesores
+            </p>
             {profesores.map(p => renderParticipante(p, p.usuario_id === usuarioId))}
           </div>
         )}
 
         {alumnos.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Alumnos</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+              Alumnos
+            </p>
             {alumnos.map(p => renderParticipante(p, p.usuario_id === usuarioId))}
           </div>
         )}

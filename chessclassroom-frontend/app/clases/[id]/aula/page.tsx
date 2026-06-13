@@ -9,7 +9,7 @@ import ModalGuardarPartida from '@/components/aula/ModalGuardarPartida';
 import ListaParticipantes from '@/components/aula/ListaParticipantes';
 import SalaVozPanel from '@/components/aula/SalaVozPanel';
 import { useLiveKit } from '@/contexts/LiveKitContext';
-import { useAulaPresencia } from '@/hooks/useAulaPresencia';
+import { usePresencia } from '@/contexts/PresenciaContext';
 import { EventoAula } from '@/hooks/useAulaRealtime';
 
 interface DatosAula {
@@ -51,7 +51,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
 
   const emitirRef = useRef<((evento: EventoAula) => void) | null>(null);
 
-  const { presentes, actualizarEnVoz } = useAulaPresencia(aula?.id ?? null);
+  const { presentes, iniciarPresencia, actualizarEnVoz, limpiar } = usePresencia();
   const { conectado } = useLiveKit();
 
   const cargarDatos = useCallback(async () => {
@@ -115,9 +115,22 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
   useEffect(() => { cargarPermisos(); }, [cargarPermisos]);
 
+  // Iniciar presencia cuando se carga el aula
+  useEffect(() => {
+    if (aula) iniciarPresencia(aula.id);
+  }, [aula, iniciarPresencia]);
+
+  // Actualizar estado de voz en presencia
   useEffect(() => {
     actualizarEnVoz(conectado);
   }, [conectado, actualizarEnVoz]);
+
+  // Limpiar presencia siempre al salir del aula
+  useEffect(() => {
+    return () => {
+      limpiar();
+    };
+  }, [limpiar]);
 
   if (loading) {
     return (
@@ -208,7 +221,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
 
-            <SalaVozPanel aulaId={aula.id} />
+            <SalaVozPanel aulaId={aula.id} esProfesor={esProfesor} />
           </div>
 
           {/* Centro: tablero */}

@@ -1,33 +1,190 @@
 'use client';
 
+import { useState } from 'react';
 import { useLiveKit } from '@/contexts/LiveKitContext';
 
 interface Props {
   aulaId: string;
+  esProfesor: boolean;
 }
 
-export default function SalaVozPanel({ aulaId }: Props) {
+function BarrasVoz({ hablando }: { hablando: boolean }) {
+  return (
+    <div className="flex items-end gap-[2px] h-4">
+      {[6, 14, 10, 12].map((h, i) => (
+        <div
+          key={i}
+          style={{
+            width: '3px',
+            borderRadius: '2px',
+            height: hablando ? `${h}px` : '4px',
+            background: hablando ? '#22c55e' : '#d1d5db',
+            transition: 'height 0.15s ease, background 0.15s ease',
+            animation: hablando ? `bar${i} 0.7s ease-in-out infinite ${i * 0.1}s` : 'none'
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes bar0 { 0%,100%{height:6px} 50%{height:14px} }
+        @keyframes bar1 { 0%,100%{height:14px} 50%{height:6px} }
+        @keyframes bar2 { 0%,100%{height:10px} 50%{height:16px} }
+        @keyframes bar3 { 0%,100%{height:12px} 50%{height:5px} }
+      `}</style>
+    </div>
+  );
+}
+
+function TarjetaParticipante({
+  participante,
+  esProfesor,
+  muteadoPorProfesor,
+  onMutear,
+  onExpulsar,
+  onVolumen,
+  volumen
+}: {
+  participante: { identity: string; nombre: string; isSpeaking: boolean; isMuted: boolean; isLocal: boolean };
+  esProfesor: boolean;
+  muteadoPorProfesor: boolean;
+  onMutear?: (identity: string, muted: boolean) => void;
+  onExpulsar?: (identity: string) => void;
+  onVolumen?: (identity: string, vol: number) => void;
+  volumen: number;
+}) {
+  const silenciado = participante.isLocal
+    ? participante.isMuted || muteadoPorProfesor
+    : participante.isMuted;
+
+  return (
+    <div className={`p-2.5 rounded-xl border transition-colors ${
+      participante.isSpeaking && !silenciado
+        ? 'bg-green-50 border-green-200'
+        : silenciado
+        ? 'bg-red-50 border-red-200'
+        : 'bg-slate-50 border-slate-200'
+    }`}>
+      <div className="flex items-center gap-2">
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          {participante.isSpeaking && !silenciado && (
+            <div className="absolute inset-0 rounded-full bg-green-400 opacity-30 animate-ping" />
+          )}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold relative z-10 ${
+            participante.isSpeaking && !silenciado
+              ? 'bg-green-100 text-green-700 outline outline-2 outline-green-400 outline-offset-1'
+              : silenciado
+              ? 'bg-red-100 text-red-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}>
+            {participante.nombre.slice(0, 2).toUpperCase()}
+          </div>
+        </div>
+
+        {/* Nombre y estado */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-semibold truncate ${
+            participante.isSpeaking && !silenciado ? 'text-green-700' :
+            silenciado ? 'text-red-700' : 'text-slate-800'
+          }`}>
+            {participante.nombre}
+            {participante.isLocal && <span className="text-slate-400 font-normal"> (tú)</span>}
+          </p>
+          <p className={`text-[10px] ${
+            participante.isSpeaking && !silenciado ? 'text-green-600' :
+            silenciado ? 'text-red-500' : 'text-slate-400'
+          }`}>
+            {participante.isLocal && muteadoPorProfesor
+              ? 'Muteado por el profesor'
+              : silenciado ? 'Silenciado'
+              : participante.isSpeaking ? 'Hablando...'
+              : 'Conectado'}
+          </p>
+        </div>
+
+        {/* Barras de voz */}
+        {!silenciado && (
+          <BarrasVoz hablando={participante.isSpeaking} />
+        )}
+
+        {/* Icono mute */}
+        {silenciado && (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ef4444">
+            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+          </svg>
+        )}
+      </div>
+
+      {/* Control de volumen — solo para otros usuarios */}
+      {!participante.isLocal && onVolumen && (
+        <div className="mt-2 flex items-center gap-2">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#94a3b8">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+          </svg>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={volumen}
+            onChange={e => onVolumen(participante.identity, parseFloat(e.target.value))}
+            className="flex-1 h-1 accent-blue-500"
+          />
+          <span className="text-[10px] text-slate-400 w-7 text-right">
+            {Math.round(volumen * 100)}%
+          </span>
+        </div>
+      )}
+
+      {/* Controles profesor */}
+      {esProfesor && !participante.isLocal && onMutear && onExpulsar && (
+        <div className="mt-2 flex gap-1">
+          <button
+            onClick={() => onMutear(participante.identity, !participante.isMuted)}
+            className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${
+              participante.isMuted
+                ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+            }`}
+          >
+            {participante.isMuted ? '🎙️ Desmutear' : '🔇 Mutear'}
+          </button>
+          <button
+            onClick={() => onExpulsar(participante.identity)}
+            className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-colors"
+          >
+            ✕ Expulsar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function SalaVozPanel({ aulaId, esProfesor }: Props) {
   const {
     conectado, conectando, micActivo, muteadoPorProfesor,
-    ensordecido, participantesVoz,
-    unirse, salir, toggleMic, toggleEnsordecido, error
+    participantesVoz, unirse, salir, toggleMic,
+    mutearParticipante, expulsarParticipante,
+    setVolumenParticipante, error
   } = useLiveKit();
 
+  const [volumenes, setVolumenes] = useState<Record<string, number>>({});
+
+  const getVolumen = (identity: string) => volumenes[identity] ?? 1;
+
+  const handleVolumen = (identity: string, vol: number) => {
+    setVolumenes(prev => ({ ...prev, [identity]: vol }));
+    setVolumenParticipante(identity, vol);
+  };
+
   const yo = participantesVoz.find(p => p.isLocal);
+  const otros = participantesVoz.filter(p => !p.isLocal);
   const micBloqueado = muteadoPorProfesor;
   const micVisible = micActivo && !muteadoPorProfesor;
-  const silenciado = !micActivo || muteadoPorProfesor;
-
-  const estadoTexto = () => {
-    if (muteadoPorProfesor) return '🔇 Muteado por el profesor';
-    if (!micActivo) return '🔇 Micrófono silenciado';
-    if (ensordecido) return '🔕 Audio silenciado';
-    if (yo?.isSpeaking) return 'Hablando...';
-    return 'Conectado';
-  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      {/* Cabecera */}
       <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl">🎙️</span>
@@ -45,55 +202,26 @@ export default function SalaVozPanel({ aulaId }: Props) {
 
         {conectado ? (
           <>
-            {/* Estado propio */}
-            <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-              yo?.isSpeaking    ? 'bg-green-50 border-green-200' :
-              silenciado        ? 'bg-red-50 border-red-200' :
-              ensordecido       ? 'bg-amber-50 border-amber-200' :
-              'bg-slate-50 border-slate-200'
-            }`}>
-              <div className="relative w-8 h-8 shrink-0">
-                {yo?.isSpeaking && (
-                  <div className="absolute inset-0 rounded-full bg-green-400 opacity-40 animate-ping" />
-                )}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold relative z-10 ${
-                  yo?.isSpeaking ? 'bg-green-100 text-green-700' :
-                  silenciado     ? 'bg-red-100 text-red-700' :
-                  ensordecido    ? 'bg-amber-100 text-amber-700' :
-                  'bg-blue-100 text-blue-700'
-                }`}>
-                  {yo?.nombre?.slice(0, 2).toUpperCase() ?? 'YO'}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs font-semibold truncate ${
-                  yo?.isSpeaking ? 'text-green-700' :
-                  silenciado     ? 'text-red-700' :
-                  ensordecido    ? 'text-amber-700' :
-                  'text-slate-700'
-                }`}>
-                  {yo?.nombre ?? 'Tú'}
-                </p>
-                <p className={`text-xs ${
-                  yo?.isSpeaking ? 'text-green-600' :
-                  silenciado     ? 'text-red-600' :
-                  ensordecido    ? 'text-amber-600' :
-                  'text-slate-400'
-                }`}>
-                  {estadoTexto()}
-                </p>
-              </div>
-            </div>
+            {/* Tarjeta propia */}
+            {yo && (
+              <TarjetaParticipante
+                participante={yo}
+                esProfesor={esProfesor}
+                muteadoPorProfesor={muteadoPorProfesor}
+                volumen={1}
+              />
+            )}
 
-            {/* Controles */}
+            {/* Controles propios */}
             <div className="flex gap-2">
-              {/* Mic */}
               <button
                 onClick={toggleMic}
                 disabled={micBloqueado}
-                title={micBloqueado ? 'Muteado por el profesor' : micActivo ? 'Silenciar micrófono' : 'Activar micrófono'}
+                title={micBloqueado ? 'Muteado por el profesor' : micActivo ? 'Silenciar' : 'Activar micrófono'}
                 className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  !micVisible ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  !micVisible
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -105,24 +233,8 @@ export default function SalaVozPanel({ aulaId }: Props) {
                 {muteadoPorProfesor ? 'Muteado' : micActivo ? 'Mic' : 'Muteado'}
               </button>
 
-              {/* Audio */}
-              <button
-                onClick={toggleEnsordecido}
-                title={ensordecido ? 'Activar audio' : 'Silenciar audio'}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${
-                  ensordecido ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 1C7.03 1 3 5.03 3 10v4c0 1.1.9 2 2 2h1v-6H4v-1c0-4.42 3.58-8 8-8s8 3.58 8 8v1h-2v6h1c1.1 0 2-.9 2-2v-4c0-4.97-4.03-9-9-9zM9 14H7v4h2v-4zm8 0h-2v4h2v-4z"/>
-                </svg>
-                {ensordecido ? 'Sordo' : 'Audio'}
-              </button>
-
-              {/* Salir */}
               <button
                 onClick={salir}
-                title="Salir de la sala"
                 className="flex-1 py-2 rounded-xl text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center justify-center gap-1.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -131,6 +243,27 @@ export default function SalaVozPanel({ aulaId }: Props) {
                 Salir
               </button>
             </div>
+
+            {/* Lista scrolleable de otros participantes */}
+            {otros.length > 0 && (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  En la sala ({otros.length})
+                </p>
+                {otros.map(p => (
+                  <TarjetaParticipante
+                    key={p.identity}
+                    participante={p}
+                    esProfesor={esProfesor}
+                    muteadoPorProfesor={false}
+                    onMutear={esProfesor ? mutearParticipante : undefined}
+                    onExpulsar={esProfesor ? expulsarParticipante : undefined}
+                    onVolumen={handleVolumen}
+                    volumen={getVolumen(p.identity)}
+                  />
+                ))}
+              </div>
+            )}
           </>
         ) : (
           <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 export interface PresenciaUsuario {
@@ -9,7 +9,22 @@ export interface PresenciaUsuario {
   apellidos: string;
   rol: 'profesor' | 'alumno';
   en_voz: boolean;
-  ensordecido?: boolean;
+}
+
+interface PresenciaContextType {
+  presentes: PresenciaUsuario[];
+  aulaId: string | null;
+  iniciarPresencia: (aulaId: string) => void;
+  actualizarEnVoz: (enVoz: boolean) => Promise<void>;
+  limpiar: () => void;
+}
+
+const PresenciaContext = createContext<PresenciaContextType | null>(null);
+
+export function usePresencia() {
+  const ctx = useContext(PresenciaContext);
+  if (!ctx) throw new Error('usePresencia debe usarse dentro de PresenciaProvider');
+  return ctx;
 }
 
 const supabase = createClient(
@@ -17,14 +32,38 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export function useAulaPresencia(aulaId: string | null) {
+export function PresenciaProvider({ children }: { children: React.ReactNode }) {
   const [presentes, setPresentes] = useState<PresenciaUsuario[]>([]);
+  const [aulaId, setAulaId] = useState<string | null>(null);
   const canalRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const usuarioRef = useRef<PresenciaUsuario | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!aulaId) return;
+  const limpiar = useCallback(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    if (canalRef.current && usuarioRef.current) {
+      canalRef.current.send({
+        type: 'broadcast',
+        event: 'DESCONECTADO',
+        payload: { usuario_id: usuarioRef.current.usuario_id }
+      });
+      supabase.removeChannel(canalRef.current);
+      canalRef.current = null;
+    }
+    usuarioRef.current = null;
+    setPresentes([]);
+    setAulaId(null);
+  }, []);
+
+  const iniciarPresencia = useCallback((nuevoAulaId: string) => {
+    // Solo salir si hay canal activo, usuario activo Y es el mismo aula
+    if (canalRef.current && aulaId === nuevoAulaId && usuarioRef.current) return;
+
+    // Limpiar canal anterior si existe
+    if (canalRef.current) limpiar();
 
     const usuarioStr = localStorage.getItem('usuario');
     if (!usuarioStr) return;
@@ -35,12 +74,11 @@ export function useAulaPresencia(aulaId: string | null) {
       nombre: usuarioRaw.nombre,
       apellidos: usuarioRaw.apellidos,
       rol: usuarioRaw.rol,
-      en_voz: false,
-      ensordecido: false
+      en_voz: false
     };
     usuarioRef.current = yo;
 
-    const canal = supabase.channel(`presencia-broadcast:${aulaId}`, {
+    const canal = supabase.channel(`presencia-broadcast:${nuevoAulaId}`, {
       config: { broadcast: { self: false } }
     });
 
@@ -49,7 +87,6 @@ export function useAulaPresencia(aulaId: string | null) {
         if (prev.find(p => p.usuario_id === payload.usuario_id)) return prev;
         return [...prev, payload as PresenciaUsuario];
       });
-      // Responder con nuestra presencia
       canal.send({
         type: 'broadcast',
         event: 'PRESENCIA',
@@ -77,16 +114,6 @@ export function useAulaPresencia(aulaId: string | null) {
       setPresentes(prev => prev.filter(p => p.usuario_id !== payload.usuario_id));
     });
 
-    // Nuevo — escuchar estados de voz
-    canal.on('broadcast', { event: 'ESTADO_VOZ' }, ({ payload }) => {
-      setPresentes(prev =>
-        prev.map(p => p.usuario_id === payload.usuario_id
-          ? { ...p, ensordecido: payload.ensordecido, en_voz: payload.en_voz ?? p.en_voz }
-          : p
-        )
-      );
-    });
-
     canal.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setPresentes([yo]);
@@ -96,37 +123,35 @@ export function useAulaPresencia(aulaId: string | null) {
           payload: yo
         });
         heartbeatRef.current = setInterval(async () => {
-          await canal.send({
-            type: 'broadcast',
-            event: 'PRESENCIA',
-            payload: usuarioRef.current
-          });
+          if (usuarioRef.current) {
+            await canal.send({
+              type: 'broadcast',
+              event: 'PRESENCIA',
+              payload: usuarioRef.current
+            });
+          }
         }, 30000);
       }
     });
 
     canalRef.current = canal;
+    setAulaId(nuevoAulaId);
 
     const handleBeforeUnload = () => {
-      canal.send({
-        type: 'broadcast',
-        event: 'DESCONECTADO',
-        payload: { usuario_id: yo.usuario_id }
-      });
+      if (usuarioRef.current) {
+        canal.send({
+          type: 'broadcast',
+          event: 'DESCONECTADO',
+          payload: { usuario_id: usuarioRef.current.usuario_id }
+        });
+      }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      canal.send({
-        type: 'broadcast',
-        event: 'DESCONECTADO',
-        payload: { usuario_id: yo.usuario_id }
-      });
-      supabase.removeChannel(canal);
     };
-  }, [aulaId]);
+  }, [aulaId, limpiar]);
 
   const actualizarEnVoz = useCallback(async (enVoz: boolean) => {
     const canal = canalRef.current;
@@ -145,27 +170,13 @@ export function useAulaPresencia(aulaId: string | null) {
     });
   }, []);
 
-  // Nuevo — emitir estado de ensordecido
-  const actualizarEnsordecido = useCallback(async (ensordecido: boolean) => {
-    const canal = canalRef.current;
-    if (!canal || !usuarioRef.current) return;
-    usuarioRef.current = { ...usuarioRef.current, ensordecido };
-    setPresentes(prev =>
-      prev.map(p => p.usuario_id === usuarioRef.current!.usuario_id
-        ? { ...p, ensordecido }
-        : p
-      )
-    );
-    await canal.send({
-      type: 'broadcast',
-      event: 'ESTADO_VOZ',
-      payload: {
-        usuario_id: usuarioRef.current.usuario_id,
-        ensordecido,
-        en_voz: usuarioRef.current.en_voz
-      }
-    });
-  }, []);
+  useEffect(() => {
+    return () => { limpiar(); };
+  }, [limpiar]);
 
-  return { presentes, actualizarEnVoz, actualizarEnsordecido };
+  return (
+    <PresenciaContext.Provider value={{ presentes, aulaId, iniciarPresencia, actualizarEnVoz, limpiar }}>
+      {children}
+    </PresenciaContext.Provider>
+  );
 }
