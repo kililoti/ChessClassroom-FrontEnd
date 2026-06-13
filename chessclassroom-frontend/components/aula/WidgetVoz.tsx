@@ -114,7 +114,7 @@ export default function WidgetVoz() {
   const colorAvatar = yo?.isSpeaking && !silenciado ? '#15803d' : silenciado ? '#b91c1c' : '#1d4ed8';
 
   const estadoTexto = () => {
-    if (muteadoPorProfesor) return 'Muteado por el profesor';
+    if (muteadoPorProfesor) return 'Silenciado por el profesor';
     if (!micActivo) return 'Micrófono silenciado';
     if (yo?.isSpeaking) return 'Hablando...';
     return 'Conectado';
@@ -215,7 +215,7 @@ export default function WidgetVoz() {
         <button
           onClick={toggleMic}
           disabled={micBloqueado}
-          title={micBloqueado ? 'Muteado por el profesor' : micActivo ? 'Silenciar' : 'Activar micrófono'}
+          title={micBloqueado ? 'Silenciado por el profesor' : micActivo ? 'Silenciar' : 'Activar micrófono'}
           style={{
             flex: 1, padding: '6px', borderRadius: '8px',
             cursor: micBloqueado ? 'not-allowed' : 'pointer',

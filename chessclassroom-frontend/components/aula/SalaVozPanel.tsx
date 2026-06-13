@@ -94,7 +94,7 @@ function TarjetaParticipante({
             silenciado ? 'text-red-500' : 'text-slate-400'
           }`}>
             {participante.isLocal && muteadoPorProfesor
-              ? 'Muteado por el profesor'
+              ? 'Silenciado por el profesor'
               : silenciado ? 'Silenciado'
               : participante.isSpeaking ? 'Hablando...'
               : 'Conectado'}
@@ -108,7 +108,7 @@ function TarjetaParticipante({
 
         {/* Icono mute */}
         {silenciado && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ef4444">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444">
             <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
           </svg>
         )}
@@ -117,7 +117,7 @@ function TarjetaParticipante({
       {/* Control de volumen — solo para otros usuarios */}
       {!participante.isLocal && onVolumen && (
         <div className="mt-2 flex items-center gap-2">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#94a3b8">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#94a3b8">
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
           </svg>
           <input
@@ -127,7 +127,7 @@ function TarjetaParticipante({
             step={0.05}
             value={volumen}
             onChange={e => onVolumen(participante.identity, parseFloat(e.target.value))}
-            className="flex-1 h-1 accent-blue-500"
+            className="flex-1 h-1 accent-blue-500 cursor-pointer"
           />
           <span className="text-[10px] text-slate-400 w-7 text-right">
             {Math.round(volumen * 100)}%
@@ -136,26 +136,41 @@ function TarjetaParticipante({
       )}
 
       {/* Controles profesor */}
-      {esProfesor && !participante.isLocal && onMutear && onExpulsar && (
-        <div className="mt-2 flex gap-1">
-          <button
-            onClick={() => onMutear(participante.identity, !participante.isMuted)}
-            className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${
-              participante.isMuted
-                ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
-                : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-            }`}
-          >
-            {participante.isMuted ? '🎙️ Desmutear' : '🔇 Mutear'}
-          </button>
-          <button
-            onClick={() => onExpulsar(participante.identity)}
-            className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-colors"
-          >
-            ✕ Expulsar
-          </button>
-        </div>
+{esProfesor && !participante.isLocal && onMutear && onExpulsar && (
+  <div className="mt-2 flex gap-1">
+    <button
+      onClick={() => onMutear(participante.identity, !participante.isMuted)}
+      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+        participante.isMuted
+          ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border-slate-300'
+      }`}
+    >
+      {participante.isMuted ? (
+        <>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z"/>
+          </svg>
+          Activar
+        </>
+      ) : (
+        <>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
+          </svg>
+          Silenciar
+        </>
       )}
+    </button>
+    <button
+      onClick={() => onExpulsar(participante.identity)}
+      className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 border-red-200 border hover:bg-red-200 transition-colors cursor-pointer "
+    >
+      ✕ Expulsar
+    </button>
+  </div>
+)}
     </div>
   );
 }
@@ -217,8 +232,7 @@ export default function SalaVozPanel({ aulaId, esProfesor }: Props) {
               <button
                 onClick={toggleMic}
                 disabled={micBloqueado}
-                title={micBloqueado ? 'Muteado por el profesor' : micActivo ? 'Silenciar' : 'Activar micrófono'}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                   !micVisible
                     ? 'bg-red-100 text-red-700 hover:bg-red-200'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -230,12 +244,12 @@ export default function SalaVozPanel({ aulaId, esProfesor }: Props) {
                     : <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
                   }
                 </svg>
-                {muteadoPorProfesor ? 'Muteado' : micActivo ? 'Mic' : 'Muteado'}
+                {muteadoPorProfesor ? 'Silenciado' : micActivo ? 'Mic' : 'Silenciado'}
               </button>
 
               <button
                 onClick={salir}
-                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 rounded-xl text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.12-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>

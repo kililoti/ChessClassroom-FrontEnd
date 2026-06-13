@@ -240,7 +240,7 @@ export function LiveKitProvider({
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ muted: true })
         });
-        if (!res.ok) throw new Error('Error al mutear');
+        if (!res.ok) throw new Error('Error al silenciar');
       } else {
         const room = roomRef.current;
         if (!room) return;
@@ -253,7 +253,7 @@ export function LiveKitProvider({
         );
       }
     } catch (e: any) {
-      console.error('Error muteando:', e.message);
+      console.error('Error silenciando:', e.message);
     }
   }, [aulaId]);
 

@@ -228,13 +228,13 @@ export default function VistaAula({
             <>
               <button
                 onClick={onCargarPartida}
-                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors"
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 Cargar partida
               </button>
               <button
                 onClick={onGuardar}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 Guardar
               </button>
@@ -314,7 +314,7 @@ export default function VistaAula({
       <div className="w-full mt-6 px-4 flex justify-end gap-4">
         <button
           onClick={handleGirar}
-          className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2"
+          className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" />
@@ -325,9 +325,9 @@ export default function VistaAula({
         {esProfesor && (
           <button
             onClick={handleReiniciar}
-            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-sm"
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
           >
-            Reiniciar Partida
+            Reiniciar Tablero
           </button>
         )}
       </div>

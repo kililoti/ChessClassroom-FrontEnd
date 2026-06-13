@@ -113,17 +113,29 @@ export default function ListaParticipantes({
           </div>
 
           {/* Iconos estado voz */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {enVoz && (
               <span title={hablando ? 'Hablando' : 'En sala de voz'}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill={hablando ? '#22c55e' : '#94a3b8'}>
+                <svg 
+                  width="15" 
+                  height="15" 
+                  viewBox="0 0 24 24" 
+                  fill={hablando ? '#22c55e' : '#94a3b8'}
+                  className="shrink-0"
+                >
                   <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                 </svg>
               </span>
             )}
             {enVoz && muteado && (
-              <span title="Muteado">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444">
+              <span title="Silenciado">
+                <svg 
+                  width="15" 
+                  height="15" 
+                  viewBox="0 0 24 24" 
+                  fill="#ef4444"
+                  className="shrink-0"
+                >
                   <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
                 </svg>
               </span>
@@ -133,28 +145,28 @@ export default function ListaParticipantes({
 
         {/* Permisos tablero — solo profesor sobre alumnos */}
         {esProfesor && !esYo && p.rol === 'alumno' && permisosP && (
-          <div className="flex gap-1">
+          <div className="flex gap-2 mt-2">
             <button
               onClick={() => togglePermiso(p.usuario_id, 'blancas')}
               title="Permiso mover blancas"
-              className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border-2 shadow-sm cursor-pointer ${
                 permisosP.puede_mover_blancas
-                  ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-blue-200'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
               }`}
             >
-              ♙ B
+              ♙ Blancas
             </button>
             <button
               onClick={() => togglePermiso(p.usuario_id, 'negras')}
               title="Permiso mover negras"
-              className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-colors border ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all border-2 shadow-sm cursor-pointer ${
                 permisosP.puede_mover_negras
-                  ? 'bg-slate-800 text-white border-slate-800'
-                  : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-blue-200'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
               }`}
             >
-              ♟ N
+              ♟ Negras
             </button>
           </div>
         )}
@@ -167,10 +179,10 @@ export default function ListaParticipantes({
       <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl">👥</span>
-          <h2 className="font-bold text-slate-800">Participantes</h2>
+          <h2 className="font-bold text-slate-800">Usuarios en el aula</h2>
         </div>
         <span className="text-xs text-slate-400 font-medium">
-          {presentes.length} en el aula
+          {presentes.length}
         </span>
       </div>
 
