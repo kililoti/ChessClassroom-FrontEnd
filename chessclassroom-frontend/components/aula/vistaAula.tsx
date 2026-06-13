@@ -11,9 +11,12 @@ export interface VistaAulaProps {
   aulaId: string;
   pgnInicial?: string;
   esProfesor?: boolean;
+  usuarioId?: string;
+  permisosIniciales?: { puede_mover_blancas: boolean; puede_mover_negras: boolean };
   onCargarPartida?: () => void;
   onGuardar?: () => void;
   onPgnChange?: (pgn: string) => void;
+  onEmitirRef?: (emitir: (evento: EventoAula) => void) => void;
 }
 
 function reproducirSonido(tipo: 'move' | 'capture') {
@@ -24,11 +27,16 @@ export default function VistaAula({
   aulaId,
   pgnInicial = '',
   esProfesor = false,
+  usuarioId,
+  permisosIniciales,
   onCargarPartida,
   onGuardar,
   onPgnChange,
+  onEmitirRef,
 }: VistaAulaProps) {
   const [orientacion, setOrientacion] = useState<'white' | 'black'>('white');
+  const [puedeBlancas, setPuedeBlancas] = useState(permisosIniciales?.puede_mover_blancas ?? false);
+  const [puedeNegras, setPuedeNegras]   = useState(permisosIniciales?.puede_mover_negras  ?? false);
 
   const {
     pgn, fenVisible, estilosCombinados,
@@ -48,32 +56,44 @@ export default function VistaAula({
   }, [orientacionInicial]);
 
   useEffect(() => {
-  onPgnChange?.(pgn);
-}, [pgn, onPgnChange]);
+    onPgnChange?.(pgn);
+  }, [pgn, onPgnChange]);
 
-  // Manejar eventos recibidos del canal (solo alumnos los aplican)
+  // Actualizar permisos si cambian desde fuera (cuando cargan de BD)
+  useEffect(() => {
+    setPuedeBlancas(permisosIniciales?.puede_mover_blancas ?? false);
+    setPuedeNegras(permisosIniciales?.puede_mover_negras  ?? false);
+  }, [permisosIniciales]);
+
   const handleEvento = useCallback((evento: EventoAula) => {
-    if (esProfesor) return;
-
     switch (evento.tipo) {
       case 'MOVIMIENTO':
+        if (evento.emisor_id === usuarioId) break;
         cargarPgn(evento.pgn);
         reproducirSonido(evento.sonido);
         break;
       case 'CARGA':
       case 'REINICIO':
-        cargarPgn(evento.pgn);
+        if (!esProfesor) cargarPgn(evento.pgn);
         break;
       case 'NAVEGAR':
-        cargarPgn(evento.pgn);
-        setTimeout(() => setIndiceVista(evento.indice), 0);
-        reproducirSonido(evento.sonido);
+        if (!esProfesor) {
+          cargarPgn(evento.pgn);
+          setTimeout(() => setIndiceVista(evento.indice), 0);
+          reproducirSonido(evento.sonido);
+        }
         break;
       case 'ORIENTACION':
-        setOrientacion(evento.orientacion);
+        if (!esProfesor) setOrientacion(evento.orientacion);
+        break;
+      case 'PERMISOS':
+        if (!esProfesor && evento.alumno_id === usuarioId) {
+          setPuedeBlancas(evento.puede_mover_blancas);
+          setPuedeNegras(evento.puede_mover_negras);
+        }
         break;
     }
-  }, [esProfesor, cargarPgn, setIndiceVista]);
+  }, [esProfesor, usuarioId, cargarPgn, setIndiceVista]);
 
   const { emitir } = useAulaRealtime({
     aulaId,
@@ -81,7 +101,10 @@ export default function VistaAula({
     onEvento: handleEvento
   });
 
-  // Persistir tablero en BD
+  useEffect(() => {
+    onEmitirRef?.(emitir);
+  }, [emitir, onEmitirRef]);
+
   const persistirTablero = useCallback(async (pgn: string, fen: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -98,41 +121,55 @@ export default function VistaAula({
     }
   }, [aulaId]);
 
-  // Emitir y persistir cuando el profesor carga una nueva partida
-  // Va DESPUÉS de emitir y persistirTablero para que estén definidos
   useEffect(() => {
     if (!esProfesor || !pgnInicial) return;
     emitir({ tipo: 'CARGA', pgn: pgnInicial, fen: '' });
     persistirTablero(pgnInicial, '');
   }, [pgnInicial, esProfesor, emitir, persistirTablero]);
 
-  // Interceptar onPieceDrop para emitir y persistir tras movimiento
+  const puedeArrastrar = esProfesor ||
+    (puedeBlancas && gameActual.turn() === 'w') ||
+    (puedeNegras  && gameActual.turn() === 'b');
+
   const handlePieceDrop = useCallback((args: Parameters<typeof onPieceDrop>[0]): MoveResult => {
     const resultado = onPieceDrop(args);
-    if (resultado.exito && esProfesor) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move' });
+    if (resultado.exito) {
+      emitir({
+        tipo: 'MOVIMIENTO',
+        pgn: resultado.pgn,
+        fen: resultado.fen,
+        sonido: resultado.captura ? 'capture' : 'move',
+        emisor_id: usuarioId
+      });
       persistirTablero(resultado.pgn, resultado.fen);
     }
     return resultado;
-  }, [onPieceDrop, esProfesor, emitir, persistirTablero]);
+  }, [onPieceDrop, emitir, usuarioId, persistirTablero]);
 
-  // Interceptar promoción para emitir y persistir tras selección
   const handlePromotionSelectAula = useCallback((piece: Parameters<typeof handlePromotionSelect>[0]) => {
     const resultado = handlePromotionSelect(piece);
-    if (resultado.exito && esProfesor) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move' });
+    if (resultado.exito) {
+      emitir({
+        tipo: 'MOVIMIENTO',
+        pgn: resultado.pgn,
+        fen: resultado.fen,
+        sonido: resultado.captura ? 'capture' : 'move',
+        emisor_id: usuarioId
+      });
       persistirTablero(resultado.pgn, resultado.fen);
     }
-  }, [handlePromotionSelect, esProfesor, emitir, persistirTablero]);
+  }, [handlePromotionSelect, emitir, usuarioId, persistirTablero]);
 
-  // Girar tablero
+  const handlePieceDrag = useCallback((args: Parameters<typeof onPieceDrag>[0]) => {
+    return onPieceDrag(args);
+  }, [onPieceDrag, puedeBlancas, puedeNegras]);
+
   const handleGirar = () => {
     const nueva = orientacion === 'white' ? 'black' : 'white';
     setOrientacion(nueva);
     if (esProfesor) emitir({ tipo: 'ORIENTACION', orientacion: nueva });
   };
 
-  // Reiniciar
   const handleReiniciar = () => {
     reiniciar();
     const fenInicial = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -140,14 +177,12 @@ export default function VistaAula({
     persistirTablero('', fenInicial);
   };
 
-  // Sonido según índice
   const sonidoDeIndice = useCallback((indice: number): 'move' | 'capture' => {
     if (indice <= 0) return 'move';
     const movimiento = historialMovimientos[indice - 1];
     return movimiento?.captured ? 'capture' : 'move';
   }, [historialMovimientos]);
 
-  // Navegación planilla con emit
   const handleSetIndiceVista = useCallback((indice: number) => {
     setIndiceVista(indice);
     if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice, sonido: sonidoDeIndice(indice) });
@@ -205,6 +240,13 @@ export default function VistaAula({
               </button>
             </>
           )}
+
+          {!esProfesor && (puedeBlancas || puedeNegras) && (
+            <span className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+              Puedes mover {puedeBlancas && puedeNegras ? 'ambos colores' : puedeBlancas ? 'blancas' : 'negras'}
+            </span>
+          )}
+
           <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm ${
             gameActual.isGameOver()
               ? 'bg-red-100 text-red-600'
@@ -221,11 +263,13 @@ export default function VistaAula({
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-stretch justify-center">
         <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
           <ChessboardCore
+            key={`${puedeBlancas}-${puedeNegras}`}
             fen={fenVisible}
             squareStyles={estilosCombinados}
             orientation={orientacion}
-            onPieceDrop={esProfesor ? handlePieceDrop : undefined}
-            onPieceDrag={esProfesor ? onPieceDrag : undefined}
+            allowDragging={puedeArrastrar}
+            onPieceDrop={puedeArrastrar ? handlePieceDrop : undefined}
+            onPieceDrag={puedeArrastrar ? handlePieceDrag : undefined}
             onSquareClick={onSquareClick}
           />
         </div>

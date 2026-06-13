@@ -9,6 +9,7 @@ export interface PresenciaUsuario {
   apellidos: string;
   rol: 'profesor' | 'alumno';
   en_voz: boolean;
+  ensordecido?: boolean;
 }
 
 const supabase = createClient(
@@ -34,7 +35,8 @@ export function useAulaPresencia(aulaId: string | null) {
       nombre: usuarioRaw.nombre,
       apellidos: usuarioRaw.apellidos,
       rol: usuarioRaw.rol,
-      en_voz: false
+      en_voz: false,
+      ensordecido: false
     };
     usuarioRef.current = yo;
 
@@ -42,14 +44,12 @@ export function useAulaPresencia(aulaId: string | null) {
       config: { broadcast: { self: false } }
     });
 
-    // Escuchar cuando alguien se conecta
     canal.on('broadcast', { event: 'CONECTADO' }, ({ payload }) => {
-      console.log('🟢 CONECTADO:', payload);
       setPresentes(prev => {
         if (prev.find(p => p.usuario_id === payload.usuario_id)) return prev;
         return [...prev, payload as PresenciaUsuario];
       });
-      // Responder con nuestra presencia para que el recién llegado nos vea
+      // Responder con nuestra presencia
       canal.send({
         type: 'broadcast',
         event: 'PRESENCIA',
@@ -57,16 +57,13 @@ export function useAulaPresencia(aulaId: string | null) {
       });
     });
 
-    // Escuchar respuestas de presencia
     canal.on('broadcast', { event: 'PRESENCIA' }, ({ payload }) => {
-      console.log('🔵 PRESENCIA:', payload);
       setPresentes(prev => {
         if (prev.find(p => p.usuario_id === payload.usuario_id)) return prev;
         return [...prev, payload as PresenciaUsuario];
       });
     });
 
-    // Escuchar actualizaciones (en_voz, etc.)
     canal.on('broadcast', { event: 'ACTUALIZAR' }, ({ payload }) => {
       setPresentes(prev =>
         prev.map(p => p.usuario_id === payload.usuario_id
@@ -76,26 +73,28 @@ export function useAulaPresencia(aulaId: string | null) {
       );
     });
 
-    // Escuchar desconexiones
     canal.on('broadcast', { event: 'DESCONECTADO' }, ({ payload }) => {
-      console.log('🔴 DESCONECTADO:', payload);
       setPresentes(prev => prev.filter(p => p.usuario_id !== payload.usuario_id));
     });
 
-    canal.subscribe(async (status) => {
-      console.log('📡 Estado canal presencia:', status);
-      if (status === 'SUBSCRIBED') {
-        // Añadirse a sí mismo
-        setPresentes([yo]);
+    // Nuevo — escuchar estados de voz
+    canal.on('broadcast', { event: 'ESTADO_VOZ' }, ({ payload }) => {
+      setPresentes(prev =>
+        prev.map(p => p.usuario_id === payload.usuario_id
+          ? { ...p, ensordecido: payload.ensordecido, en_voz: payload.en_voz ?? p.en_voz }
+          : p
+        )
+      );
+    });
 
-        // Anunciar llegada
+    canal.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        setPresentes([yo]);
         await canal.send({
           type: 'broadcast',
           event: 'CONECTADO',
           payload: yo
         });
-
-        // Heartbeat cada 30s para detectar desconexiones inesperadas
         heartbeatRef.current = setInterval(async () => {
           await canal.send({
             type: 'broadcast',
@@ -108,7 +107,6 @@ export function useAulaPresencia(aulaId: string | null) {
 
     canalRef.current = canal;
 
-    // Al cerrar la pestaña
     const handleBeforeUnload = () => {
       canal.send({
         type: 'broadcast',
@@ -147,5 +145,27 @@ export function useAulaPresencia(aulaId: string | null) {
     });
   }, []);
 
-  return { presentes, actualizarEnVoz };
+  // Nuevo — emitir estado de ensordecido
+  const actualizarEnsordecido = useCallback(async (ensordecido: boolean) => {
+    const canal = canalRef.current;
+    if (!canal || !usuarioRef.current) return;
+    usuarioRef.current = { ...usuarioRef.current, ensordecido };
+    setPresentes(prev =>
+      prev.map(p => p.usuario_id === usuarioRef.current!.usuario_id
+        ? { ...p, ensordecido }
+        : p
+      )
+    );
+    await canal.send({
+      type: 'broadcast',
+      event: 'ESTADO_VOZ',
+      payload: {
+        usuario_id: usuarioRef.current.usuario_id,
+        ensordecido,
+        en_voz: usuarioRef.current.en_voz
+      }
+    });
+  }, []);
+
+  return { presentes, actualizarEnVoz, actualizarEnsordecido };
 }

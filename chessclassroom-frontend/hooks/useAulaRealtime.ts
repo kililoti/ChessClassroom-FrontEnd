@@ -2,11 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 export type EventoAula =
-  | { tipo: 'MOVIMIENTO';  pgn: string; fen: string; sonido: 'move' | 'capture' }
+  | { tipo: 'MOVIMIENTO';  pgn: string; fen: string; sonido: 'move' | 'capture'; emisor_id?: string }
   | { tipo: 'NAVEGAR';     pgn: string; indice: number; sonido: 'move' | 'capture' }
   | { tipo: 'ORIENTACION'; orientacion: 'white' | 'black' }
   | { tipo: 'REINICIO';    pgn: string; fen: string }
-  | { tipo: 'CARGA';       pgn: string; fen: string };
+  | { tipo: 'CARGA';       pgn: string; fen: string }
+  | { tipo: 'PERMISOS';    alumno_id: string; puede_mover_blancas: boolean; puede_mover_negras: boolean };
 
 interface UseAulaRealtimeOptions {
   aulaId: string;
@@ -32,9 +33,7 @@ export function useAulaRealtime({ aulaId, esProfesor, onEvento }: UseAulaRealtim
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       }
     );
@@ -45,23 +44,21 @@ export function useAulaRealtime({ aulaId, esProfesor, onEvento }: UseAulaRealtim
 
     canal
       .on('broadcast', { event: 'MOVIMIENTO' }, ({ payload }) => {
-        console.log('📨 Evento recibido MOVIMIENTO:', payload);
         onEventoRef.current(payload);
       })
       .on('broadcast', { event: 'NAVEGAR' }, ({ payload }) => {
-        console.log('📨 Evento recibido NAVEGAR:', payload);
         onEventoRef.current(payload);
       })
       .on('broadcast', { event: 'ORIENTACION' }, ({ payload }) => {
-        console.log('📨 Evento recibido ORIENTACION:', payload);
         onEventoRef.current(payload);
       })
       .on('broadcast', { event: 'REINICIO' }, ({ payload }) => {
-        console.log('📨 Evento recibido REINICIO:', payload);
         onEventoRef.current(payload);
       })
       .on('broadcast', { event: 'CARGA' }, ({ payload }) => {
-        console.log('📨 Evento recibido CARGA:', payload);
+        onEventoRef.current(payload);
+      })
+      .on('broadcast', { event: 'PERMISOS' }, ({ payload }) => {
         onEventoRef.current(payload);
       })
       .subscribe((status) => {
@@ -75,15 +72,15 @@ export function useAulaRealtime({ aulaId, esProfesor, onEvento }: UseAulaRealtim
     };
   }, [aulaId]);
 
+  // Todos pueden emitir — la lógica de quién emite qué está en VistaAula
   const emitir = useCallback((evento: EventoAula) => {
-    if (!canalRef.current || !esProfesor) return;
-    console.log('📤 Emitiendo evento:', evento);
+    if (!canalRef.current) return;
     canalRef.current.send({
       type: 'broadcast',
       event: evento.tipo,
       payload: evento
     });
-  }, [esProfesor]);
+  }, []);
 
   return { emitir };
 }

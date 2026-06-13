@@ -15,6 +15,7 @@ interface Props {
   esProfesor: boolean;
   permisos: PermisosTablero[];
   onPermisosChange: () => void;
+  onEmitirPermiso: (alumnoId: string, blancas: boolean, negras: boolean) => void;
 }
 
 function getToken() {
@@ -22,18 +23,24 @@ function getToken() {
 }
 
 export default function ListaParticipantes({
-  aulaId, presentes, esProfesor, permisos, onPermisosChange
+  aulaId, presentes, esProfesor, permisos, onPermisosChange, onEmitirPermiso
 }: Props) {
-  const { participantesVoz, mutearParticipante, ensordecer } = useLiveKit();
+  const { participantesVoz, mutearParticipante, expulsarParticipante } = useLiveKit();
 
-  const estaEnVoz = (usuarioId: string) =>
-    participantesVoz.some(p => p.identity === usuarioId);
+  // Si el usuario está en voz, usar LiveKit (fiable). Si no, usar broadcast de presencia.
+  const estaEnVoz = (id: string) => {
+    if (participantesVoz.length > 0) {
+      return participantesVoz.some(p => p.identity === id);
+    }
+    const presente = presentes.find(p => p.usuario_id === id);
+    return presente?.en_voz ?? false;
+  };
 
-  const estaHablando = (usuarioId: string) =>
-    participantesVoz.find(p => p.identity === usuarioId)?.isSpeaking ?? false;
+  const estaHablando = (id: string) =>
+    participantesVoz.find(p => p.identity === id)?.isSpeaking ?? false;
 
-  const estaMuteado = (usuarioId: string) =>
-    participantesVoz.find(p => p.identity === usuarioId)?.isMuted ?? false;
+  const estaMuteado = (id: string) =>
+    participantesVoz.find(p => p.identity === id)?.isMuted ?? false;
 
   const getPermisos = (alumnoId: string) =>
     permisos.find(p => p.alumno_id === alumnoId) ?? {
@@ -42,41 +49,42 @@ export default function ListaParticipantes({
       puede_mover_negras: false
     };
 
-  const togglePermiso = async (
-    alumnoId: string,
-    tipo: 'blancas' | 'negras'
-  ) => {
+  const togglePermiso = async (alumnoId: string, tipo: 'blancas' | 'negras') => {
     const actual = getPermisos(alumnoId);
-    const body = {
-      puede_mover_blancas: tipo === 'blancas' ? !actual.puede_mover_blancas : actual.puede_mover_blancas,
-      puede_mover_negras:  tipo === 'negras'  ? !actual.puede_mover_negras  : actual.puede_mover_negras,
-    };
+    const nuevasBlancas = tipo === 'blancas' ? !actual.puede_mover_blancas : actual.puede_mover_blancas;
+    const nuevasNegras  = tipo === 'negras'  ? !actual.puede_mover_negras  : actual.puede_mover_negras;
     try {
       await fetch(`http://localhost:3001/api/aula/${aulaId}/permisos/${alumnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ puede_mover_blancas: nuevasBlancas, puede_mover_negras: nuevasNegras })
       });
       onPermisosChange();
+      onEmitirPermiso(alumnoId, nuevasBlancas, nuevasNegras);
     } catch (e) { console.error(e); }
   };
 
   const profesores = presentes.filter(p => p.rol === 'profesor');
-  const alumnos   = presentes.filter(p => p.rol === 'alumno');
+  const alumnos    = presentes.filter(p => p.rol === 'alumno');
+
+  const usuarioId = typeof window !== 'undefined'
+    ? JSON.parse(localStorage.getItem('usuario') ?? '{}').id
+    : null;
 
   const renderParticipante = (p: PresenciaUsuario, esYo: boolean) => {
-    const enVoz     = estaEnVoz(p.usuario_id);
-    const hablando  = estaHablando(p.usuario_id);
-    const muteado   = estaMuteado(p.usuario_id);
+    const enVoz    = estaEnVoz(p.usuario_id);
+    const hablando = estaHablando(p.usuario_id);
+    const muteado  = estaMuteado(p.usuario_id);
     const permisosP = p.rol === 'alumno' ? getPermisos(p.usuario_id) : null;
+
+    // Solo mostrar controles de voz si el usuario local está en la sala
+    const localEnVoz = participantesVoz.length > 0;
 
     return (
       <div
         key={p.usuario_id}
         className={`flex flex-col gap-2 p-2.5 rounded-xl border transition-colors ${
-          hablando
-            ? 'bg-green-50 border-green-200'
-            : 'bg-slate-50 border-slate-200'
+          hablando ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
         }`}
       >
         {/* Fila principal */}
@@ -87,9 +95,9 @@ export default function ListaParticipantes({
               <div className="absolute inset-0 rounded-full bg-green-400 opacity-30 animate-ping" />
             )}
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold relative z-10 ${
-              hablando   ? 'bg-green-100 text-green-700 outline outline-2 outline-green-400 outline-offset-1' :
-              enVoz      ? 'bg-blue-100 text-blue-700' :
-              'bg-slate-200 text-slate-600'
+              hablando ? 'bg-green-100 text-green-700 outline outline-2 outline-green-400 outline-offset-1' :
+              enVoz    ? 'bg-blue-100 text-blue-700' :
+                         'bg-slate-200 text-slate-600'
             }`}>
               {p.nombre.slice(0, 1)}{p.apellidos.slice(0, 1)}
             </div>
@@ -109,7 +117,7 @@ export default function ListaParticipantes({
           {/* Iconos estado voz */}
           <div className="flex items-center gap-1 shrink-0">
             {enVoz && (
-              <span title="En sala de voz">
+              <span title={hablando ? 'Hablando' : 'En sala de voz'}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill={hablando ? '#22c55e' : '#94a3b8'}>
                   <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                 </svg>
@@ -125,7 +133,7 @@ export default function ListaParticipantes({
           </div>
         </div>
 
-        {/* Controles profesor sobre este participante */}
+        {/* Controles profesor */}
         {esProfesor && !esYo && (
           <div className="flex flex-col gap-1.5">
 
@@ -157,22 +165,25 @@ export default function ListaParticipantes({
               </div>
             )}
 
-            {/* Controles voz — solo si está en sala */}
-            {enVoz && (
+            {/* Controles voz — solo si el profesor está en la sala Y el alumno también */}
+            {localEnVoz && enVoz && (
               <div className="flex gap-1">
                 <button
-                  onClick={() => mutearParticipante(p.usuario_id)}
-                  title="Mutear micrófono"
-                  className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors"
+                  onClick={() => mutearParticipante(p.usuario_id, !muteado)}
+                  className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${
+                    muteado
+                      ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                      : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                  }`}
                 >
-                  🔇 Mutear
+                  {muteado ? '🎙️ Desmutear' : '🔇 Mutear'}
                 </button>
                 <button
-                  onClick={() => ensordecer(p.usuario_id, true)}
-                  title="Ensordecer"
-                  className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-colors"
+                  onClick={() => expulsarParticipante(p.usuario_id)}
+                  title="Expulsar de la sala de voz"
+                  className="flex-1 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-colors"
                 >
-                  🔕 Sordo
+                  ✕ Expulsar
                 </button>
               </div>
             )}
@@ -182,10 +193,6 @@ export default function ListaParticipantes({
       </div>
     );
   };
-
-  const usuarioId = typeof window !== 'undefined'
-    ? JSON.parse(localStorage.getItem('usuario') ?? '{}').id
-    : null;
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -198,8 +205,6 @@ export default function ListaParticipantes({
       </div>
 
       <div className="p-3 flex flex-col gap-3 max-h-[600px] overflow-y-auto">
-
-        {/* Profesores */}
         {profesores.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Profesores</p>
@@ -207,7 +212,6 @@ export default function ListaParticipantes({
           </div>
         )}
 
-        {/* Alumnos */}
         {alumnos.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Alumnos</p>

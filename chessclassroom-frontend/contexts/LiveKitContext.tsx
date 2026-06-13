@@ -15,17 +15,16 @@ interface LiveKitContextType {
   conectado: boolean;
   conectando: boolean;
   micActivo: boolean;
+  muteadoPorProfesor: boolean;
   ensordecido: boolean;
-  ensordecidoPorProfesor: boolean;
   participantesVoz: ParticipanteVoz[];
   aulaId: string | null;
-  roomRef: React.MutableRefObject<Room | null>;
   unirse: (aulaId: string) => Promise<void>;
   salir: () => void;
   toggleMic: () => Promise<void>;
   toggleEnsordecido: () => void;
-  mutearParticipante: (identity: string) => Promise<void>;
-  ensordecer: (identity: string, valor: boolean) => Promise<void>;
+  mutearParticipante: (identity: string, muted: boolean) => Promise<void>;
+  expulsarParticipante: (identity: string) => Promise<void>;
   error: string;
 }
 
@@ -39,11 +38,14 @@ export function useLiveKit() {
 
 export function LiveKitProvider({ children }: { children: React.ReactNode }) {
   const roomRef = useRef<Room | null>(null);
+  // Ref para saber si el mute lo hizo el propio usuario
+  const muteandoYoMismoRef = useRef(false);
+
   const [conectado, setConectado] = useState(false);
   const [conectando, setConectando] = useState(false);
   const [micActivo, setMicActivo] = useState(true);
+  const [muteadoPorProfesor, setMuteadoPorProfesor] = useState(false);
   const [ensordecido, setEnsordecido] = useState(false);
-  const [ensordecidoPorProfesor, setEnsordecidoPorProfesor] = useState(false);
   const [participantesVoz, setParticipantesVoz] = useState<ParticipanteVoz[]>([]);
   const [aulaId, setAulaId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -68,7 +70,7 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         identity: p.identity,
         nombre: p.name ?? p.identity,
         isSpeaking: p.isSpeaking,
-        isMuted: p.audioTrackPublications.size === 0 ||
+        isMuted: p.audioTrackPublications.size > 0 &&
           [...p.audioTrackPublications.values()].every(t => t.isMuted),
         isLocal: false,
       });
@@ -79,7 +81,8 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
 
   const unirse = useCallback(async (aulaIdNuevo: string) => {
     if (conectado || conectando) return;
-    setConectando(true); setError('');
+    setConectando(true);
+    setError('');
 
     try {
       const token = localStorage.getItem('token');
@@ -92,47 +95,68 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
       const room = new Room();
       roomRef.current = room;
 
-      // Participantes
-      room.on(RoomEvent.ParticipantConnected, actualizarParticipantes);
+      room.on(RoomEvent.ParticipantConnected, () => {
+        setTimeout(actualizarParticipantes, 200);
+      });
+
       room.on(RoomEvent.ParticipantDisconnected, actualizarParticipantes);
-      room.on(RoomEvent.TrackMuted, actualizarParticipantes);
-      room.on(RoomEvent.TrackUnmuted, actualizarParticipantes);
       room.on(RoomEvent.ActiveSpeakersChanged, actualizarParticipantes);
       room.on(RoomEvent.LocalTrackPublished, actualizarParticipantes);
       room.on(RoomEvent.LocalTrackUnpublished, actualizarParticipantes);
 
-      // Audio — adjuntar directamente al body
+      room.on(RoomEvent.TrackMuted, (pub, participant) => {
+        if (participant.identity === room.localParticipant.identity) {
+          if (pub.kind === Track.Kind.Audio) {
+            setMicActivo(false);
+            // Si el mute NO lo hizo el propio usuario, fue el servidor (profesor)
+            if (!muteandoYoMismoRef.current) {
+              setMuteadoPorProfesor(true);
+            }
+          }
+        }
+        actualizarParticipantes();
+      });
+
+      room.on(RoomEvent.TrackUnmuted, (pub, participant) => {
+        if (participant.identity === room.localParticipant.identity) {
+          if (pub.kind === Track.Kind.Audio) {
+            setMicActivo(true);
+            setMuteadoPorProfesor(false);
+          }
+        }
+        actualizarParticipantes();
+      });
+
+      // Audio
       room.on(RoomEvent.TrackSubscribed, (track) => {
-        console.log('🎵 Track subscribed:', track.kind);
         if (track.kind === Track.Kind.Audio) {
-          const el = track.attach();
+          const el = track.attach() as HTMLAudioElement;
           el.setAttribute('data-livekit-audio', 'true');
+          if (ensordecido) el.volume = 0;
           document.body.appendChild(el);
-          console.log('🔊 Audio adjuntado al body');
         }
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         if (track.kind === Track.Kind.Audio) {
-          track.detach().forEach((el) => el.remove());
+          track.detach().forEach(el => el.remove());
         }
       });
 
-      // Mensajes de datos (ensordecer remoto)
+      // Mensajes del profesor
       room.on(RoomEvent.DataReceived, (data: Uint8Array) => {
         try {
           const msg = JSON.parse(new TextDecoder().decode(data));
-          if (msg.tipo === 'ENSORDECER') {
-            if (msg.target === room.localParticipant.identity) {
-              setEnsordecidoPorProfesor(msg.valor);
-              room.remoteParticipants.forEach(p => {
-                p.audioTrackPublications.forEach(pub => {
-                  if (pub.audioTrack) {
-                    pub.audioTrack.mediaStreamTrack.enabled = !msg.valor;
-                  }
-                });
-              });
-            }
+
+          if (msg.tipo === 'DESMUTEAR' && msg.target === room.localParticipant.identity) {
+            room.localParticipant.setMicrophoneEnabled(true).then(() => {
+              setMicActivo(true);
+              setMuteadoPorProfesor(false);
+            });
+          }
+
+          if (msg.tipo === 'EXPULSAR' && msg.target === room.localParticipant.identity) {
+            room.disconnect();
           }
         } catch {}
       });
@@ -142,26 +166,32 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
         setConectado(false);
         setAulaId(null);
         setParticipantesVoz([]);
+        setMicActivo(true);
+        setMuteadoPorProfesor(false);
+        setEnsordecido(false);
         roomRef.current = null;
       });
 
       await room.connect(data.serverUrl, data.token);
+
       try {
         await room.localParticipant.setMicrophoneEnabled(true);
-      } catch (micError: any) {
-        console.warn('No se pudo activar el micrófono:', micError.message);
+      } catch (e: any) {
+        console.warn('No se pudo activar el micrófono:', e.message);
       }
 
       setAulaId(aulaIdNuevo);
       setConectado(true);
       setMicActivo(true);
+      setMuteadoPorProfesor(false);
+      setEnsordecido(false);
       actualizarParticipantes();
     } catch (e: any) {
       setError(e.message);
     } finally {
       setConectando(false);
     }
-  }, [conectado, conectando, actualizarParticipantes]);
+  }, [conectado, conectando, actualizarParticipantes, ensordecido]);
 
   const salir = useCallback(() => {
     document.querySelectorAll('[data-livekit-audio]').forEach(el => el.remove());
@@ -171,54 +201,69 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
     setAulaId(null);
     setParticipantesVoz([]);
     setMicActivo(true);
+    setMuteadoPorProfesor(false);
     setEnsordecido(false);
-    setEnsordecidoPorProfesor(false);
   }, []);
 
   const toggleMic = useCallback(async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || muteadoPorProfesor) return;
     const nuevoEstado = !micActivo;
+    muteandoYoMismoRef.current = true;
     await room.localParticipant.setMicrophoneEnabled(nuevoEstado);
+    muteandoYoMismoRef.current = false;
     setMicActivo(nuevoEstado);
     actualizarParticipantes();
-  }, [micActivo, actualizarParticipantes]);
+  }, [micActivo, muteadoPorProfesor, actualizarParticipantes]);
 
   const toggleEnsordecido = useCallback(() => {
-    const room = roomRef.current;
-    if (!room) return;
     const nuevo = !ensordecido;
-    room.remoteParticipants.forEach(p => {
-      p.audioTrackPublications.forEach(pub => {
-        if (pub.audioTrack) {
-          pub.audioTrack.mediaStreamTrack.enabled = !nuevo;
-        }
-      });
+    document.querySelectorAll('[data-livekit-audio]').forEach(el => {
+      (el as HTMLAudioElement).volume = nuevo ? 0 : 1;
     });
     setEnsordecido(nuevo);
   }, [ensordecido]);
 
-  const mutearParticipante = useCallback(async (identity: string) => {
+  const mutearParticipante = useCallback(async (identity: string, muted: boolean) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`http://localhost:3001/api/livekit/${aulaId}/mutear/${identity}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    } catch (e: any) { console.error('Error muteando:', e.message); }
+      if (muted) {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:3001/api/livekit/${aulaId}/mutear/${identity}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ muted: true })
+        });
+        if (!res.ok) throw new Error('Error al mutear');
+      } else {
+        const room = roomRef.current;
+        if (!room) return;
+        await room.localParticipant.publishData(
+          new TextEncoder().encode(JSON.stringify({
+            tipo: 'DESMUTEAR',
+            target: identity
+          })),
+          { reliable: true }
+        );
+      }
+    } catch (e: any) {
+      console.error('Error muteando:', e.message);
+    }
   }, [aulaId]);
 
-  const ensordecer = useCallback(async (identity: string, valor: boolean) => {
+  const expulsarParticipante = useCallback(async (identity: string) => {
     const room = roomRef.current;
     if (!room) return;
-    await room.localParticipant.publishData(
-      new TextEncoder().encode(JSON.stringify({
-        tipo: 'ENSORDECER',
-        target: identity,
-        valor
-      })),
-      { reliable: true }
-    );
+    try {
+      await room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({
+          tipo: 'EXPULSAR',
+          target: identity
+        })),
+        { reliable: true }
+      );
+    } catch (e: any) {
+      console.error('Error expulsando:', e.message);
+    }
   }, []);
 
   useEffect(() => {
@@ -230,10 +275,10 @@ export function LiveKitProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LiveKitContext.Provider value={{
-      conectado, conectando, micActivo, ensordecido, ensordecidoPorProfesor,
-      participantesVoz, aulaId, roomRef,
+      conectado, conectando, micActivo, muteadoPorProfesor,
+      ensordecido, participantesVoz, aulaId,
       unirse, salir, toggleMic, toggleEnsordecido,
-      mutearParticipante, ensordecer, error
+      mutearParticipante, expulsarParticipante, error
     }}>
       {children}
     </LiveKitContext.Provider>
