@@ -283,7 +283,7 @@ export default function SalaVozPanel({ aulaId, esProfesor }: Props) {
           <button
             onClick={() => unirse(aulaId)}
             disabled={conectando}
-            className="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             {conectando ? (
               <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
