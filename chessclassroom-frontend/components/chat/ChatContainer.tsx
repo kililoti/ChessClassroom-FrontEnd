@@ -169,7 +169,7 @@ export default function ChatContainer({ salaId }: ChatContainerProps) {
           <button
             type="submit"
             disabled={!nuevoMensaje.trim()}
-            className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer"
           >
             Enviar
           </button>
