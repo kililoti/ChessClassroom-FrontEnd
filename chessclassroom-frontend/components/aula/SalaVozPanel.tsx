@@ -82,14 +82,14 @@ function TarjetaParticipante({
 
         {/* Nombre y estado */}
         <div className="flex-1 min-w-0">
-          <p className={`text-xs font-semibold truncate ${
+          <p className={`text-[13px] font-semibold truncate ${
             participante.isSpeaking && !silenciado ? 'text-green-700' :
             silenciado ? 'text-red-700' : 'text-slate-800'
           }`}>
             {participante.nombre}
             {participante.isLocal && <span className="text-slate-400 font-normal"> (tú)</span>}
           </p>
-          <p className={`text-[10px] ${
+          <p className={`text-[12px] ${
             participante.isSpeaking && !silenciado ? 'text-green-600' :
             silenciado ? 'text-red-500' : 'text-slate-400'
           }`}>
@@ -205,7 +205,7 @@ export default function SalaVozPanel({ aulaId, esProfesor }: Props) {
           <span className="text-xl">🎙️</span>
           <h2 className="font-bold text-slate-800">Sala de voz</h2>
         </div>
-        <span className="text-xs text-slate-400 font-medium">
+        <span className="text-[14px] text-slate-400 font-medium">
           {conectado ? `${participantesVoz.length} conectados` : '0 conectados'}
         </span>
       </div>
