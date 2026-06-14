@@ -65,6 +65,7 @@ export default function EstudiosPage() {
         <JuegoAjedrez
           pgnInicial={visorPgn}
           onClose={() => { setVisorPgn(null); setArchivoActual(null); }}
+          mostrarStockfish={true}
         />
       </div>
     );
