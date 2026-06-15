@@ -127,9 +127,8 @@ export default function JuegoAjedrez({
         </div>
 
         {/* Planilla */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 relative h-[350px] lg:h-auto">
-          <div className="absolute inset-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto pr-2">
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[350px] lg:h-[550px] flex flex-col">
+          <div className="flex-1 overflow-y-auto pr-2">
               <Planilla
                 historialMovimientos={historialMovimientos}
                 indiceVista={indiceVista}
@@ -140,7 +139,7 @@ export default function JuegoAjedrez({
                 irAdelante={irAdelante}
                 irAlFinal={irAlFinal}
               />
-            </div>
+            
           </div>
         </div>
 
