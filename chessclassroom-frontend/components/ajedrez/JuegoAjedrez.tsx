@@ -1,22 +1,28 @@
-// Viewer completo de ajedrez: tablero + planilla + chat.
-// Delega toda la lógica en useChessGame y el tablero en ChessboardCore.
+// Visor de partidas para estudios. Limpio, sin lógica de ejercicios
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useChessGame } from '@/hooks/useChessGame';
+import { useStockfish } from '@/hooks/useStockfish';
 import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
+import PanelStockfish from '@/components/ajedrez/PanelStockfish';
+import EvalBarVertical from '@/components/ajedrez/EvalBarVertical';
 
 export interface JuegoAjedrezProps {
   pgnInicial?: string;
   onClose?: () => void;
+  mostrarStockfish?: boolean;   // muestra el panel
+  stockfishBloqueado?: boolean; // true = panel visible pero desactivado hasta que se cumpla condición
 }
 
 export default function JuegoAjedrez({
   pgnInicial = '',
   onClose,
+  mostrarStockfish = false,
+  stockfishBloqueado = false,
 }: JuegoAjedrezProps) {
   const [orientacion, setOrientacion] = useState<'white' | 'black'>('white');
 
@@ -26,15 +32,43 @@ export default function JuegoAjedrez({
     totalMoves, estamosEnElPresente,
     historialMovimientos, gameActual,
     pendingPromotion,
+    orientacionInicial, 
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
-    reiniciar,
+    cargarPgn,
   } = useChessGame({ pgnInicial });
+
+  const stockfish = useStockfish();
+
+  // Cada vez que cambia el FEN visible, re-analizar si Stockfish está activo
+  useEffect(() => {
+    if (mostrarStockfish && stockfish.activo) {
+      stockfish.analizarFen(fenVisible);
+    }
+  }, [fenVisible, stockfish.activo, mostrarStockfish]);
+
+  // Al desmontar, desactivar Stockfish
+  useEffect(() => {
+    return () => { stockfish.desactivar(); };
+  }, []);
+
+  // Flechas: solo mostrar si Stockfish está activo y visible
+  const flechasTablero = mostrarStockfish && stockfish.activo ? stockfish.flechas : [];
+
+  // El turno en la posición actual
+  const turnoBlancas = fenVisible.split(' ')[1] === 'w';
+  const numeroJugada = parseInt(fenVisible.split(' ')[5], 10) || 1;
+  useEffect(() => {
+    setOrientacion(orientacionInicial);
+  }, [orientacionInicial]);
+
+  const handleReiniciar = () => {
+    cargarPgn(pgnInicial);
+  };
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
-
       {pendingPromotion && (
         <PromotionModal
           color={pendingPromotion.color}
@@ -47,11 +81,7 @@ export default function JuegoAjedrez({
       <div className="w-full flex justify-between items-center mb-6 mt-4 px-4">
         <div className="flex items-center gap-4">
           {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors"
-              title="Volver al explorador"
-            >
+            <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors" title="Volver">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
@@ -59,9 +89,7 @@ export default function JuegoAjedrez({
         </div>
 
         <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm ${
-          gameActual.isGameOver()
-            ? 'bg-red-100 text-red-600'
-            : 'bg-green-100 text-green-700'
+          gameActual.isGameOver() ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
         }`}>
           {gameActual.isGameOver()
             ? 'Partida Terminada'
@@ -69,34 +97,68 @@ export default function JuegoAjedrez({
         </span>
       </div>
 
-      {/* 2 columnas: Tablero | Planilla */}
-      <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-center justify-center">
+      {/* Layout principal: Tablero | Planilla | (Panel Stockfish si activo) */}
+      <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-start justify-center">
 
-        {/* Tablero */}
-        <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
-          <ChessboardCore
-            fen={fenVisible}
-            squareStyles={estilosCombinados}
-            orientation={orientacion}
-            onPieceDrop={onPieceDrop}
-            onPieceDrag={onPieceDrag}
-            onSquareClick={onSquareClick}
-          />
+        {/* Tablero + barra de evaluación */}
+        <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c] flex">
+          {mostrarStockfish && (
+            <div className="w-5 shrink-0 border-r-4 border-[#302e2c]">
+              <EvalBarVertical
+                evaluacion={stockfish.lineas[0]?.evaluacion ?? 0}
+                mate={stockfish.lineas[0]?.mate ?? null}
+                turnoBlancas={turnoBlancas}
+                orientation={orientacion}
+                activo={stockfish.activo && stockfish.lineas.length > 0}
+              />
+            </div>
+          )}
+          <div className="flex-1">
+            <ChessboardCore
+              fen={fenVisible}
+              squareStyles={estilosCombinados}
+              orientation={orientacion}
+              onPieceDrop={onPieceDrop}
+              onPieceDrag={onPieceDrag}
+              onSquareClick={onSquareClick}
+              flechas={flechasTablero}
+            />
+          </div>
         </div>
 
         {/* Planilla */}
-        <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[550px]">
-          <Planilla
-            historialMovimientos={historialMovimientos}
-            indiceVista={indiceVista}
-            setIndiceVista={setIndiceVista}
-            estamosEnElPresente={estamosEnElPresente}
-            irAlInicio={irAlInicio}
-            irAtras={irAtras}
-            irAdelante={irAdelante}
-            irAlFinal={irAlFinal}
-          />
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 h-[350px] lg:h-[550px] flex flex-col">
+          <div className="flex-1 overflow-y-auto pr-2">
+              <Planilla
+                historialMovimientos={historialMovimientos}
+                indiceVista={indiceVista}
+                setIndiceVista={setIndiceVista}
+                estamosEnElPresente={estamosEnElPresente}
+                irAlInicio={irAlInicio}
+                irAtras={irAtras}
+                irAdelante={irAdelante}
+                irAlFinal={irAlFinal}
+              />
+            
+          </div>
         </div>
+
+        {/* Panel Stockfish — solo en módulos que lo permiten */}
+        {mostrarStockfish && (
+          <PanelStockfish
+            activo={stockfish.activo}
+            cargando={stockfish.cargando}
+            profundidad={stockfish.profundidad}
+            lineas={stockfish.lineas}
+            turnoBlancas={turnoBlancas}
+            numeroJugada={numeroJugada}
+            bloqueado={stockfishBloqueado}
+            onActivar={stockfishBloqueado ? () => {} : stockfish.activar}
+            onDesactivar={stockfish.desactivar}
+            onCambiarProfundidad={stockfish.setProfundidad}
+          />
+        )}
+     
       </div>
 
       {/* FEN + PGN */}
@@ -129,8 +191,10 @@ export default function JuegoAjedrez({
           </svg>
           Girar Tablero
         </button>
+
+        {/* Reiniciar */}
         <button
-          onClick={reiniciar}
+          onClick={handleReiniciar}
           className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-sm"
         >
           Reiniciar Partida

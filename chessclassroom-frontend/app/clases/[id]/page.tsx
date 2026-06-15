@@ -22,16 +22,21 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
       try {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
- 
+
         const res = await fetch(`http://localhost:3001/api/clases/${id}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
         });
- 
+
         if (!res.ok) throw new Error('No se pudo cargar la información de la clase');
- 
+
         const data = await res.json();
-        setClase({ id: data.id, nombre: data.nombre, tipo: data.tipo, salaIdPrincipal: data.salaIdPrincipal });
+        setClase({
+          id: data.id,
+          nombre: data.nombre,
+          tipo: data.tipo,
+          salaIdPrincipal: data.salaIdPrincipal
+        });
       } catch (err: any) {
         console.error("Error de conexión:", err);
       }
@@ -81,25 +86,25 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
     teal:   'group-hover:text-teal-600',
     slate:  'group-hover:text-slate-600',
   };
+
  
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
- 
-        {/* CABECERA */}
+
+        {/* Cabecera */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push('/dashboard')}
               className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm text-slate-600"
-              title="Volver"
+              title="Volver al dashboard"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6"/>
               </svg>
             </button>
             <div>
-              {/* TO DO: TAL VEZ QUITAR LA PARTE DE ALUMNO Y GRUPO Y SOLO MOSTRAR EL NOMBRE DE LA CLASE */}
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
                 {clase.tipo === 'particular' ? (
                   <><span className="text-3xl">👤</span> Alumno: {clase.nombre}</>
@@ -111,11 +116,11 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
         </div>
- 
-        {/* CONTENEDOR PRINCIPAL */}
+
+        {/* Grid principal */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
- 
-          {/* CHAT */}
+
+          {/* Chat */}
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1">
               <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2">
@@ -127,8 +132,8 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
           </div>
- 
-          {/* MENÚ */}
+
+          {/* Menú de navegación */}
           <div className="lg:col-span-7 xl:col-span-8">
             <div className="grid sm:grid-cols-2 gap-5">
  
@@ -139,17 +144,6 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                   href={seccion.ruta}
                   className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300 flex items-start gap-4 cursor-pointer"
                 >
-                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 group-hover:scale-110 shadow-sm ${colorClases[seccion.color]}`}>
-                    {seccion.icono}
-                  </div>
-                  <div>
-                    <h3 className={`text-lg font-bold text-slate-900 transition-colors ${colorTexto[seccion.color]}`}>
-                      {seccion.titulo}
-                    </h3>
-                    <p className="text-sm text-slate-500 mt-1 leading-snug">{seccion.desc}</p>
-                  </div>
-                </Link>
-              ))}
  
               {/* Gestión de alumnos — solo en clases grupales, ocupa las 2 columnas */}
               {clase.tipo === 'grupal' && (
@@ -167,13 +161,37 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                     <p className="text-sm text-slate-500 mt-1 leading-snug">
                       Edita nombres, alias y gestiona los miembros del grupo
                     </p>
+                  <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center text-2xl transition-all duration-300 group-hover:scale-110 shadow-sm
+                    ${seccion.color === 'blue'    ? 'bg-blue-50    text-blue-600    group-hover:bg-blue-600    group-hover:text-white' : ''}
+                    ${seccion.color === 'indigo'  ? 'bg-indigo-50  text-indigo-600  group-hover:bg-indigo-600  group-hover:text-white' : ''}
+                    ${seccion.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white' : ''}
+                    ${seccion.color === 'amber'   ? 'bg-amber-50   text-amber-600   group-hover:bg-amber-600   group-hover:text-white' : ''}
+                    ${seccion.color === 'purple'  ? 'bg-purple-50  text-purple-600  group-hover:bg-purple-600  group-hover:text-white' : ''}
+                    ${seccion.color === 'rose'    ? 'bg-rose-50    text-rose-600    group-hover:bg-rose-600    group-hover:text-white' : ''}
+                    ${seccion.color === 'cyan'    ? 'bg-cyan-50    text-cyan-600    group-hover:bg-cyan-600    group-hover:text-white' : ''}
+                  `}>
+                    {seccion.icono}
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-bold text-slate-900 transition-colors
+                      ${seccion.color === 'blue'    ? 'group-hover:text-blue-600'    : ''}
+                      ${seccion.color === 'indigo'  ? 'group-hover:text-indigo-600'  : ''}
+                      ${seccion.color === 'emerald' ? 'group-hover:text-emerald-600' : ''}
+                      ${seccion.color === 'amber'   ? 'group-hover:text-amber-600'   : ''}
+                      ${seccion.color === 'purple'  ? 'group-hover:text-purple-600'  : ''}
+                      ${seccion.color === 'rose'    ? 'group-hover:text-rose-600'    : ''}
+                      ${seccion.color === 'cyan'    ? 'group-hover:text-cyan-600'    : ''}
+                    `}>
+                      {seccion.titulo}
+                    </h3>
+                    <p className="text-sm text-slate-500 mt-1 leading-snug">{seccion.desc}</p>
                   </div>
                 </Link>
               )}
  
             </div>
           </div>
- 
+
         </div>
       </div>
     </div>
