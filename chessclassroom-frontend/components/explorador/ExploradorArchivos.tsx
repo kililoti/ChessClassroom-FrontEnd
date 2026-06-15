@@ -89,8 +89,6 @@ export default function ExploradorArchivos({
   modulo, titulo, icono, claseId, carpetaId, archivoId, basePath, onAbrirPartida, chatSlot,
 }: ExploradorConfig) {
   const router     = useRouter();
-  const usuario    = getUsuario();
-  const esProfesor = usuario?.rol === 'profesor';
 
   const [carpetas, setCarpetas]   = useState<Carpeta[]>([]);
   const [archivos, setArchivos]   = useState<Archivo[]>([]);
@@ -101,6 +99,13 @@ export default function ExploradorArchivos({
   const [error, setError]         = useState('');
   const [modalCarpeta, setModalCarpeta] = useState(false);
   const [modalPgn, setModalPgn]         = useState(false);
+
+  const [esProfesor, setEsProfesor] = useState(false);
+
+  useEffect(() => {
+    const usuario = getUsuario();
+    setEsProfesor(usuario?.rol === 'profesor');
+  }, []);
 
   const estamosEnRaiz = !carpetaId;
 
