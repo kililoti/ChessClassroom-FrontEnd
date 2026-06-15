@@ -71,8 +71,6 @@ export default function EstudiosPage() {
     );
   }
 
-  // El chat se pasa como slot al explorador para que lo coloque
-  // en el grid interno, alineado con el título y el contenido
   const chatSlot = salaEstudioId ? (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2">
@@ -92,6 +90,7 @@ export default function EstudiosPage() {
       icono={<BookOpen className="w-6 h-6 text-blue-600" />}
       claseId={claseId}
       basePath={`/clases/${claseId}/estudios`}
+      rutaVolver={`/clases/${claseId}`}
       onAbrirPartida={handleAbrirPartida}
       chatSlot={chatSlot}
     />

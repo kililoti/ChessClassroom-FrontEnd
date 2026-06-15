@@ -1,4 +1,7 @@
+'use client';
+
 import { Chessboard } from 'react-chessboard';
+import { MoveResult } from '@/hooks/useChessGame';
 
 export interface Flecha {
   desde: string;
@@ -12,7 +15,7 @@ interface Props {
   orientation?: 'white' | 'black';
   allowDragging?: boolean;
   flechas?: Flecha[];                   // ← nuevo: flechas de Stockfish
-  onPieceDrop?: (args: { piece: { isSparePiece: boolean; pieceType: string; position: string }; sourceSquare: string; targetSquare: string | null }) => boolean;
+  onPieceDrop?: (args: { piece: { isSparePiece: boolean; pieceType: string; position: string }; sourceSquare: string; targetSquare: string | null }) => MoveResult | boolean;
   onPieceDrag?: (args: { isSparePiece: boolean; piece: { pieceType: string }; square: string | null }) => void;
   onSquareClick?: (args: { piece: { pieceType: string } | null; square: string }) => void;
 }
@@ -33,6 +36,14 @@ export default function ChessboardCore({
     endSquare: f.hasta,
     color: f.color ?? 'rgba(0,128,255,0.8)',
   }));
+  // react-chessboard espera boolean, así que normaliza el resultado
+  const handlePieceDrop = onPieceDrop
+    ? (args: Parameters<typeof onPieceDrop>[0]): boolean => {
+        const resultado = onPieceDrop(args);
+        if (typeof resultado === 'boolean') return resultado;
+        return resultado.exito;
+      }
+    : undefined;
 
   return (
     <Chessboard
@@ -41,7 +52,7 @@ export default function ChessboardCore({
         squareStyles,
         boardOrientation: orientation,
         allowDragging,
-        onPieceDrop,
+        onPieceDrop:      handlePieceDrop,
         onPieceDrag,
         onSquareClick,
         arrows,

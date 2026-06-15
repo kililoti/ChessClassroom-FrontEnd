@@ -1,6 +1,6 @@
 // Tipos compartidos por todos los componentes del explorador
 
-export type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'cálculo';
+export type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'calculo';
 
 export interface Carpeta {
   id: string;
@@ -23,6 +23,7 @@ export interface Archivo {
   visible: boolean;
   created_at: string;
   usuarios?: { nombre: string; apellidos: string };
+  metadata_ejercicio?: MetadataEjercicio;
   metadata: {
     es_base_datos: boolean;
     total_partidas: number;
@@ -34,6 +35,7 @@ export interface Archivo {
       fecha: string;
       evento: string;
     }[];
+    partidas_ocultas?: number[];
   };
 }
 
@@ -43,7 +45,7 @@ export const CATEGORIA_LABELS: Record<Categoria, { label: string; color: string 
   estrategia: { label: 'Estrategia', color: 'bg-blue-100 text-blue-700' },
   final:      { label: 'Final',      color: 'bg-amber-100 text-amber-700' },
   partida:    { label: 'Partida',    color: 'bg-emerald-100 text-emerald-700' },
-  'cálculo':  { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
+  calculo:    { label: 'Cálculo',    color: 'bg-gray-100 text-gray-700' },
 };
 
 export function formatFecha(iso: string) {
@@ -54,4 +56,16 @@ export function formatFecha(iso: string) {
 
 export function nombreProfesor(u?: { nombre: string; apellidos: string }) {
   return u ? `${u.nombre} ${u.apellidos}` : 'Profesor';
+}
+
+export type EstadoEjercicio = 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
+
+export interface MetadataEjercicio {
+  id_ejercicio?: string;
+  partida_index?: number;
+  fecha_inicio?: string | null;
+  fecha_entrega?: string | null;
+  solucion_pgn?: string | null;
+  estado_alumno?: EstadoEjercicio;
+  puntuacion_alumno?: number | null;
 }
