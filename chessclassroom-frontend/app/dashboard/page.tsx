@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CalendarioMensualGlobal from '@/components/dashboard/CalendarioMensualGlobal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function DashboardPage() {
       </nav>
 
       {/* --- CONTENIDO PRINCIPAL --- */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
         {/* Cabecera de bienvenida */}
         <div className="mb-10 text-center sm:text-left">
@@ -80,7 +81,7 @@ export default function DashboardPage() {
 
         {/* --- TARJETAS DE NAVEGACIÓN --- */}
         <div className="grid sm:grid-cols-2 gap-6">
-          
+
           {/* Tarjeta 1: Alumnos Particulares */}
           <Link href="/dashboard/particulares" className="group">
             <div className="bg-white h-full border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 cursor-pointer flex flex-col items-center sm:items-start text-center sm:text-left">
@@ -110,8 +111,14 @@ export default function DashboardPage() {
               </p>
             </div>
           </Link>
-
         </div>
+
+        {/* Calendario global — ancho completo, fuera del grid de 2 columnas */}
+        <div className="mt-10">
+          <h2 className="text-xl font-bold text-slate-800 mb-4">📅 Mis eventos</h2>
+          <CalendarioMensualGlobal />
+        </div>
+
       </main>
     </div>
   );
