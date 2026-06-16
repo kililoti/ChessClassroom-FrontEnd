@@ -37,6 +37,8 @@ export function useLiveKit() {
   return ctx;
 }
 
+const LIVEKIT_STORAGE_KEY = 'livekit-aula-id';
+
 export function LiveKitProvider({
   children,
   onSalir
@@ -104,7 +106,6 @@ export function LiveKitProvider({
       room.on(RoomEvent.ParticipantConnected, () => {
         setTimeout(actualizarParticipantes, 200);
       });
-
       room.on(RoomEvent.ParticipantDisconnected, actualizarParticipantes);
       room.on(RoomEvent.ActiveSpeakersChanged, actualizarParticipantes);
       room.on(RoomEvent.LocalTrackPublished, actualizarParticipantes);
@@ -114,9 +115,7 @@ export function LiveKitProvider({
         if (participant.identity === room.localParticipant.identity) {
           if (pub.kind === Track.Kind.Audio) {
             setMicActivo(false);
-            if (!muteandoYoMismoRef.current) {
-              setMuteadoPorProfesor(true);
-            }
+            if (!muteandoYoMismoRef.current) setMuteadoPorProfesor(true);
           }
         }
         actualizarParticipantes();
@@ -136,7 +135,6 @@ export function LiveKitProvider({
         if (track.kind === Track.Kind.Audio) {
           const el = track.attach() as HTMLAudioElement;
           el.setAttribute('data-livekit-audio', 'true');
-          // Guardar identity para control de volumen individual
           el.setAttribute('data-identity', participant.identity);
           if (ensordecido) el.volume = 0;
           document.body.appendChild(el);
@@ -152,14 +150,12 @@ export function LiveKitProvider({
       room.on(RoomEvent.DataReceived, (data: Uint8Array) => {
         try {
           const msg = JSON.parse(new TextDecoder().decode(data));
-
           if (msg.tipo === 'DESMUTEAR' && msg.target === room.localParticipant.identity) {
             room.localParticipant.setMicrophoneEnabled(true).then(() => {
               setMicActivo(true);
               setMuteadoPorProfesor(false);
             });
           }
-
           if (msg.tipo === 'EXPULSAR' && msg.target === room.localParticipant.identity) {
             room.disconnect();
           }
@@ -175,6 +171,8 @@ export function LiveKitProvider({
         setMuteadoPorProfesor(false);
         setEnsordecido(false);
         roomRef.current = null;
+        // NO borramos localStorage aquí: si fue un reload o desconexión involuntaria,
+        // el auto-reconnect lo usará al volver. Solo salir() lo borra explícitamente.
         onSalir?.();
       });
 
@@ -192,8 +190,10 @@ export function LiveKitProvider({
       setMuteadoPorProfesor(false);
       setEnsordecido(false);
       actualizarParticipantes();
+      localStorage.setItem(LIVEKIT_STORAGE_KEY, aulaIdNuevo);
     } catch (e: any) {
       setError(e.message);
+      localStorage.removeItem(LIVEKIT_STORAGE_KEY);
     } finally {
       setConectando(false);
     }
@@ -209,6 +209,7 @@ export function LiveKitProvider({
     setMicActivo(true);
     setMuteadoPorProfesor(false);
     setEnsordecido(false);
+    localStorage.removeItem(LIVEKIT_STORAGE_KEY);
     onSalir?.();
   }, [onSalir]);
 
@@ -245,10 +246,7 @@ export function LiveKitProvider({
         const room = roomRef.current;
         if (!room) return;
         await room.localParticipant.publishData(
-          new TextEncoder().encode(JSON.stringify({
-            tipo: 'DESMUTEAR',
-            target: identity
-          })),
+          new TextEncoder().encode(JSON.stringify({ tipo: 'DESMUTEAR', target: identity })),
           { reliable: true }
         );
       }
@@ -262,10 +260,7 @@ export function LiveKitProvider({
     if (!room) return;
     try {
       await room.localParticipant.publishData(
-        new TextEncoder().encode(JSON.stringify({
-          tipo: 'EXPULSAR',
-          target: identity
-        })),
+        new TextEncoder().encode(JSON.stringify({ tipo: 'EXPULSAR', target: identity })),
         { reliable: true }
       );
     } catch (e: any) {
@@ -273,11 +268,24 @@ export function LiveKitProvider({
     }
   }, []);
 
-  // Control de volumen individual por participante
   const setVolumenParticipante = useCallback((identity: string, volumen: number) => {
     const el = document.querySelector(`[data-identity="${identity}"]`) as HTMLAudioElement | null;
     if (el) el.volume = Math.max(0, Math.min(1, volumen));
   }, []);
+
+  // Ref siempre actualizado para evitar closures stale en el auto-reconnect
+  const unirseRef = useRef(unirse);
+  useEffect(() => { unirseRef.current = unirse; }, [unirse]);
+
+  // Auto-reconectar al recargar la página si había una sesión activa
+  useEffect(() => {
+    const savedAulaId = localStorage.getItem(LIVEKIT_STORAGE_KEY);
+    if (!savedAulaId) return;
+    const timeout = setTimeout(() => {
+      unirseRef.current(savedAulaId);
+    }, 800); // pequeño delay para que el token y contexto estén listos
+    return () => clearTimeout(timeout);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
