@@ -23,6 +23,11 @@ export interface Archivo {
   visible: boolean;
   created_at: string;
   usuarios?: { nombre: string; apellidos: string };
+  tipo_archivo?: 'pgn' | 'foto' | 'video' | 'youtube';
+  url_publica?: string | null;
+  miniatura_url?: string | null;
+  duracion?: number | null;
+  tamanio?: number | null;
   metadata_ejercicio?: MetadataEjercicio;
   metadata: {
     es_base_datos: boolean;

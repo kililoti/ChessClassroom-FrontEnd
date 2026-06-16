@@ -62,6 +62,7 @@ export default function EstudiosCarpetaPage() {
         <JuegoAjedrez
           pgnInicial={visorPgn}
           onClose={() => { setVisorPgn(null); setArchivoActual(null); }}
+          mostrarStockfish={true}
         />
       </div>
     );

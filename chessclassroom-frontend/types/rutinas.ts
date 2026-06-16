@@ -13,6 +13,7 @@ export interface EventoCalendario {
   dias_semana: number[] | null;
   origen_grupal: boolean;
   creado_en: string;
+  clase_nombre?: string;
 }
 
 export interface RutinaChecklist {
