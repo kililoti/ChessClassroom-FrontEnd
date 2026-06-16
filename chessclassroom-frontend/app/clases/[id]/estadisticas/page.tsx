@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, BarChart3, TrendingUp, Target, Clock, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Cell } from 'recharts';
 
-const API = 'http://localhost:3001';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -53,7 +53,7 @@ export default function EstadisticasPage() {
   // Cargar alumnos (solo profesor)
   useEffect(() => {
     if (!esProfesor || !claseId) return;
-    fetch(`${API}/api/datos/alumnos/${claseId}`, {
+    fetch(`${API}/datos/alumnos/${claseId}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())
@@ -75,7 +75,7 @@ export default function EstadisticasPage() {
     if (!alumnoSel || !claseId) return;
     setCargando(true); setError('');
     try {
-      const res = await fetch(`${API}/api/datos/ejercicios/${alumnoSel}?clase_id=${claseId}`, {
+      const res = await fetch(`${API}/datos/ejercicios/${alumnoSel}?clase_id=${claseId}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const d = await res.json();
