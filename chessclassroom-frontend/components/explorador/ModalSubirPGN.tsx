@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertTriangle, Loader2, ClipboardPaste } from 'lucide-react';
 import { Categoria, CATEGORIA_LABELS } from '@/types/explorador';
 
-const API = 'http://localhost:3001/api/recursos';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

@@ -30,7 +30,7 @@ export default function CampanaNotificaciones({ usuarioId, token }: Props) {
 
   const cargar = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/rutinas/notificaciones/${usuarioId}`, { headers });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/notificaciones/${usuarioId}`, { headers });
       if (res.ok) {
         const data = await res.json();
         setNotificaciones(data);
@@ -57,12 +57,12 @@ export default function CampanaNotificaciones({ usuarioId, token }: Props) {
   }, []);
 
   const marcarLeida = async (id: string) => {
-    await fetch(`http://localhost:3001/api/rutinas/notificaciones/${id}/leer`, { method: 'PATCH', headers });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/notificaciones/${id}/leer`, { method: 'PATCH', headers });
     setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
   };
 
   const marcarTodasLeidas = async () => {
-    await fetch(`http://localhost:3001/api/rutinas/notificaciones/${usuarioId}/leer-todas`, { method: 'PATCH', headers });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/notificaciones/${usuarioId}/leer-todas`, { method: 'PATCH', headers });
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
 

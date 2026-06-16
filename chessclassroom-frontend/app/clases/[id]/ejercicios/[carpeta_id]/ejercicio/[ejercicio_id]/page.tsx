@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import VisorEjercicio, { ProgresoAlumno } from '@/components/ajedrez/VisorEjercicio';
 
-const API_EJ  = 'http://localhost:3001/api/ejercicios';
-const API_REC = 'http://localhost:3001/api/recursos';
+const API_EJ  = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
+const API_REC = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

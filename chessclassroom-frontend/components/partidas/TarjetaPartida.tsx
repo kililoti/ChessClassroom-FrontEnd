@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Swords, Clock, Trophy, Eye, Trash2, Loader2, UserPlus, PlayCircle } from 'lucide-react';
 import { Partida } from '@/types/partidas';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

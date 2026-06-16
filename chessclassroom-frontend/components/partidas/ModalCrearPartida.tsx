@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, AlertTriangle, Clock, ClipboardPaste } from 'lucide-react';
 import { useChallenges, ChallengeEmitir } from '@/contexts/ChallengesContext';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -46,7 +46,7 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
   const [error, setError]                   = useState('');
 
   useEffect(() => {
-    fetch(`http://localhost:3001/api/clases/${claseId}/miembros`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/miembros`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())

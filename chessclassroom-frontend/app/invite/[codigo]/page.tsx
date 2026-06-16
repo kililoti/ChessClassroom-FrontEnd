@@ -34,7 +34,7 @@ export default function InvitePage() {
     if (!codigo) return;
 
     // 3. Consultamos la información pública de la clase al backend
-    fetch(`http://localhost:3001/api/clases/invite/${codigo}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/invite/${codigo}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Invitación no válida');
@@ -65,7 +65,7 @@ export default function InvitePage() {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/clases/join', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

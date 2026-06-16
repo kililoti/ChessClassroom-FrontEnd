@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertTriangle, Loader2, ClipboardPaste, FolderOpen, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Chess } from 'chess.js';
 
-const API = 'http://localhost:3001/api/recursos';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

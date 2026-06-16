@@ -72,7 +72,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
         setEsProfesor(esProf);
  
         if (esProf) {
-          const res = await fetch(`http://localhost:3001/api/clases/${claseId}/alumnos`, { headers });
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`, { headers });
           if (res.ok) setAlumnos(await res.json());
         } else {
           setMiId(usuario.id);
@@ -108,8 +108,8 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     if (!esProfesor && !miId) return;
     try {
       const url = idParaQuery
-        ? `http://localhost:3001/api/rutinas/eventos/${claseId}?alumnoId=${idParaQuery}`
-        : `http://localhost:3001/api/rutinas/eventos/${claseId}`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/rutinas/eventos/${claseId}?alumnoId=${idParaQuery}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/rutinas/eventos/${claseId}`;
       const res = await fetch(url, { headers });
       if (res.ok) setEventos(await res.json());
     } catch (err) {
@@ -123,8 +123,8 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     if (!esProfesor && !miId) return;
     try {
       const url = idParaQuery
-        ? `http://localhost:3001/api/rutinas/checklist/${claseId}?alumnoId=${idParaQuery}&semanaInicio=${semanaActual}`
-        : `http://localhost:3001/api/rutinas/checklist/${claseId}`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${claseId}?alumnoId=${idParaQuery}&semanaInicio=${semanaActual}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${claseId}`;
       const res = await fetch(url, { headers });
       if (res.ok) setRutinas(await res.json());
     } catch (err) {
@@ -138,7 +138,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     if (!idParaQuery) return; // solo cuando hay alumno concreto seleccionado
     try {
       const mesAnio = `${mesCalendario.anio}-${String(mesCalendario.mes + 1).padStart(2, '0')}`;
-      const url = `http://localhost:3001/api/rutinas/checklist/${claseId}?alumnoId=${idParaQuery}&mesAnio=${mesAnio}`;
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${claseId}?alumnoId=${idParaQuery}&mesAnio=${mesAnio}`;
       const res = await fetch(url, { headers });
       if (res.ok) setRutinasCalendario(await res.json());
     } catch (err) {
@@ -152,7 +152,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
  
   const handleCrearEvento = async (evento: any) => {
     try {
-      await fetch(`http://localhost:3001/api/rutinas/eventos`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/eventos`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ ...evento, clase_id: claseId, alumno_id: alumnoSeleccionado || null }),
@@ -167,7 +167,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   const handleEliminarEvento = async (eventoId: string, soloEste: boolean, desdeGrupo: boolean) => {
     try {
       await fetch(
-        `http://localhost:3001/api/rutinas/eventos/${eventoId}?soloEste=${soloEste}&desdeGrupo=${desdeGrupo}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/rutinas/eventos/${eventoId}?soloEste=${soloEste}&desdeGrupo=${desdeGrupo}`,
         { method: 'DELETE', headers }
       );
       cargarEventos();
@@ -178,7 +178,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
  
   const handleCrearRutina = async (titulo: string) => {
     try {
-      await fetch(`http://localhost:3001/api/rutinas/checklist`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ clase_id: claseId, alumno_id: alumnoSeleccionado || null, titulo }),
@@ -192,7 +192,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
  
   const handleEliminarRutina = async (rutinaId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/rutinas/checklist/${rutinaId}`, { method: 'DELETE', headers });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${rutinaId}`, { method: 'DELETE', headers });
       cargarRutinas();
       cargarRutinasCalendario();
     } catch (err) {
@@ -202,7 +202,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
  
   const handleToggleRutina = async (semanaId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/rutinas/checklist/${semanaId}/toggle`, { method: 'PATCH', headers });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${semanaId}/toggle`, { method: 'PATCH', headers });
       cargarRutinas();
       cargarRutinasCalendario(); // recargar también el calendario para actualizar ticks
     } catch (err) {

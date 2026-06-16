@@ -23,7 +23,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
 
-        const res = await fetch(`http://localhost:3001/api/clases/${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${id}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
         });

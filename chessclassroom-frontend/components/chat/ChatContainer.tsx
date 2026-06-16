@@ -35,7 +35,7 @@ export default function ChatContainer({ salaId }: ChatContainerProps) {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No hay sesión activa');
 
-      const res = await fetch(`http://localhost:3001/api/chats/${salaId}/mensajes`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${salaId}/mensajes`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -91,7 +91,7 @@ export default function ChatContainer({ salaId }: ChatContainerProps) {
     setNuevoMensaje('');
 
     try {
-      const res = await fetch(`http://localhost:3001/api/chats/${salaId}/mensajes`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${salaId}/mensajes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ contenido: contenidoEnviado })

@@ -8,7 +8,7 @@ import ModalCrearTorneo from '@/components/torneos/ModalCrearTorneo';
 import ModalEditarTorneo from '@/components/torneos/ModalEditarTorneo';
 import { useTorneosRealtime } from '@/hooks/useTorneoRealtime';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

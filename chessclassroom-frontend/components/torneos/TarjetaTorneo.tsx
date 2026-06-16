@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Trophy, Clock, Users, Trash2, Loader2, Pencil, Calendar, PlayCircle } from 'lucide-react';
 import type { Torneo } from '@/types/partidas';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

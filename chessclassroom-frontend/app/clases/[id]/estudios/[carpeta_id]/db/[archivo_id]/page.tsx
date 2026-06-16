@@ -8,7 +8,7 @@ import JuegoAjedrez from '@/components/ajedrez/JuegoAjedrez';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { Archivo } from '@/types/explorador';
 
-const API = 'http://localhost:3001/api/recursos';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

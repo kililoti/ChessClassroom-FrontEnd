@@ -56,7 +56,7 @@ export default function CalendarioMensualGlobal() {
     setCargando(true);
     try {
       const res  = await fetch(
-        `http://localhost:3001/api/eventos-globales?anio=${anio}&mes=${mes}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/eventos-globales?anio=${anio}&mes=${mes}`,
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
       const data = await res.json();

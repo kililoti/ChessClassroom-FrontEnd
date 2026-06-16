@@ -53,7 +53,7 @@ export default function ListaParticipantes({
     const nuevasBlancas = tipo === 'blancas' ? !actual.puede_mover_blancas : actual.puede_mover_blancas;
     const nuevasNegras  = tipo === 'negras'  ? !actual.puede_mover_negras  : actual.puede_mover_negras;
     try {
-      await fetch(`http://localhost:3001/api/aula/${aulaId}/permisos/${alumnoId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aula/${aulaId}/permisos/${alumnoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ puede_mover_blancas: nuevasBlancas, puede_mover_negras: nuevasNegras })

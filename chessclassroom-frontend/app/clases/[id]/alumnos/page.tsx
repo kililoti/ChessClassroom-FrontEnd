@@ -29,7 +29,7 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
  
   const cargarAlumnos = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/clases/${claseId}/alumnos`, { headers });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`, { headers });
       if (res.ok) setAlumnos(await res.json());
     } catch (err) {
       console.error('Error al cargar alumnos:', err);
@@ -67,7 +67,7 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
   const guardarAlias = async (alumnoId: string) => {
     setGuardando(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/clases/${claseId}/alumnos/${alumnoId}/alias`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos/${alumnoId}/alias`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ alias: aliasEditado.trim() || null }),
@@ -87,7 +87,7 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
  
   const expulsarAlumno = async (alumnoId: string) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/clases/${claseId}/alumnos/${alumnoId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${claseId}/alumnos/${alumnoId}`, {
         method: 'DELETE',
         headers,
       });

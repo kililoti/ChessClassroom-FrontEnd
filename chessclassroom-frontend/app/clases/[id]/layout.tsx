@@ -17,7 +17,7 @@ function ClaseLayoutInner({ children, claseId }: { children: React.ReactNode; cl
   // Heartbeat: solo pinga cuando el jugador está activo (en torneo o en partida en curso)
   useEffect(() => {
     if (!torneoActivoId || !pingActivo || !claseId) return;
-    const ping = () => fetch(`http://localhost:3001/api/torneos/${torneoActivoId}/ping`, {
+    const ping = () => fetch(`${process.env.NEXT_PUBLIC_API_URL}/torneos/${torneoActivoId}/ping`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : ''}`,

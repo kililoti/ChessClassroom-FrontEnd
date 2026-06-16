@@ -9,8 +9,8 @@ import ModalSubirPGN from './ModalSubirPGN';
 import ModalSubirEjercicio from '@/components/ejercicios/ModalSubirEjercicio';
 import ModalFechaEntrega, { FechasGrupoPayload } from '@/components/ejercicios/ModalFechaEntrega';
 
-const API = 'http://localhost:3001/api/recursos';
-const API_EJ = 'http://localhost:3001/api/ejercicios';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
+const API_EJ = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

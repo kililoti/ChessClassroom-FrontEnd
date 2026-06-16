@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, AlertTriangle, Clock, Users, ClipboardPaste } from 'lucide-react';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -49,7 +49,7 @@ export default function ModalCrearTorneo({ claseId, onClose, onCreado }: Props) 
   const camposBasicosListos = !!nombre.trim() && !!fechaInicio && !!horaInicio && !!fechaFin && !!horaFin;
 
   useEffect(() => {
-    fetch(`http://localhost:3001/api/clases/${claseId}/miembros`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/miembros`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())

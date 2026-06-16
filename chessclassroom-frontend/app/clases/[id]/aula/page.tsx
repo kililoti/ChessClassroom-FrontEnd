@@ -63,10 +63,10 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
       setUsuario(JSON.parse(usuarioStr));
 
       const [resClase, resAula] = await Promise.all([
-        fetch(`http://localhost:3001/api/clases/${claseId}`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`http://localhost:3001/api/aula/clase/${claseId}`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/aula/clase/${claseId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -82,7 +82,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
       setPgnCargado(dataAula.pgn_actual ?? '');
       setPgnActual(dataAula.pgn_actual ?? '');
 
-      const resChats = await fetch(`http://localhost:3001/api/chats`, {
+      const resChats = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (resChats.ok) {
@@ -104,7 +104,7 @@ export default function AulaPage({ params }: { params: Promise<{ id: string }> }
     if (!aula) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3001/api/aula/${aula.id}/permisos`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aula/${aula.id}/permisos`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

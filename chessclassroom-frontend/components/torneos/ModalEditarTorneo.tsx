@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, AlertTriangle, Clock, ClipboardPaste } from 'lucide-react';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

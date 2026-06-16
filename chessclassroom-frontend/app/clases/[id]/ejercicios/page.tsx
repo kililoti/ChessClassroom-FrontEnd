@@ -20,7 +20,7 @@ export default function EjerciciosPage() {
 
   useEffect(() => {
     if (!claseId) return;
-    fetch('http://localhost:3001/api/chats', { headers: { Authorization: `Bearer ${getToken()}` } })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats`, { headers: { Authorization: `Bearer ${getToken()}` } })
       .then(r => r.json())
       .then(d => {
         const salas: any[] = d.data ?? [];

@@ -8,7 +8,7 @@ import JuegoAjedrez from '@/components/ajedrez/JuegoAjedrez';
 import ChatContainer from '@/components/chat/ChatContainer';
 import { Archivo } from '@/types/explorador';
 
-const API_RECURSOS = 'http://localhost:3001/api/recursos';
+const API_RECURSOS = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -24,7 +24,7 @@ export default function EstudiosPage() {
 
   useEffect(() => {
     if (!claseId) return;
-    fetch('http://localhost:3001/api/chats', {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then(r => r.json())

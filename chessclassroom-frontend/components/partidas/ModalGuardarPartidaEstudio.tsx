@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { X, AlertTriangle, Loader2, Plus, ChevronRight, ArrowLeft } from 'lucide-react';
 
-const API_RECURSOS = 'http://localhost:3001/api/recursos';
-const API_PARTIDAS = 'http://localhost:3001/api/partidas';
+const API_RECURSOS = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
+const API_PARTIDAS = `${process.env.NEXT_PUBLIC_API_URL}/partidas`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

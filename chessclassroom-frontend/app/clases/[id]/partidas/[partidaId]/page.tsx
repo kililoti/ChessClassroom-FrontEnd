@@ -8,7 +8,7 @@ import ChatContainer from '@/components/chat/ChatContainer';
 import ModalGuardarPartidaEstudio from '@/components/partidas/ModalGuardarPartidaEstudio';
 import { useTorneoActivo } from '@/contexts/TorneoActivoContext';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
