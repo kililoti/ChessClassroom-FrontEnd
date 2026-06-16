@@ -55,14 +55,15 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
   }
 
   const secciones = [
-    { titulo: 'Aula Virtual', ruta: `/clases/${clase.id}/aula`, icono: '💻', color: 'blue', desc: 'Pizarra interactiva y videollamada' },
-    { titulo: 'Estudio', ruta: `/clases/${clase.id}/estudios`, icono: '📚', color: 'indigo', desc: 'Archivos PDF, teoría y recursos' },
-    { titulo: 'Ejercicios', ruta: `/clases/${clase.id}/ejercicios`, icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
-    { titulo: 'Partidas', ruta: `/clases/${clase.id}/partidas`, icono: '♟️', color: 'amber', desc: 'Juega en vivo o revisa el historial' },
-    { titulo: 'Datos y ELO', ruta: `/clases/${clase.id}/estadisticas`, icono: '📊', color: 'purple', desc: 'Gráficas de rendimiento y evolución' },
-    { titulo: 'Objetivos', ruta: `/clases/${clase.id}/objetivos`, icono: '🎯', color: 'rose', desc: 'Metas a superar a corto y largo plazo' },
-    { titulo: 'Rutina', ruta: `/clases/${clase.id}/rutinas`, icono: '📅', color: 'cyan', desc: 'Calendario de entrenamiento semanal' },
+    { titulo: 'Aula Virtual',  ruta: `/clases/${clase.id}/aula`,        icono: '💻', color: 'blue',    desc: 'Pizarra interactiva y videollamada' },
+    { titulo: 'Estudio',       ruta: `/clases/${clase.id}/estudios`,     icono: '📚', color: 'indigo',  desc: 'Archivos PDF, teoría y recursos' },
+    { titulo: 'Ejercicios',    ruta: `/clases/${clase.id}/ejercicios`,   icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
+    { titulo: 'Jugar',         ruta: `/clases/${clase.id}/jugar`,        icono: '♟️', color: 'amber',   desc: 'Partidas en vivo y torneos arena' },
+    { titulo: 'Datos y ELO',   ruta: `/clases/${clase.id}/estadisticas`, icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
+    { titulo: 'Objetivos',     ruta: `/clases/${clase.id}/objetivos`,    icono: '🎯', color: 'rose',    desc: 'Metas a superar a corto y largo plazo' },
+    { titulo: 'Rutina',        ruta: `/clases/${clase.id}/rutinas`,      icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
   ];
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -125,6 +126,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                     ${seccion.color === 'purple'  ? 'bg-purple-50  text-purple-600  group-hover:bg-purple-600  group-hover:text-white' : ''}
                     ${seccion.color === 'rose'    ? 'bg-rose-50    text-rose-600    group-hover:bg-rose-600    group-hover:text-white' : ''}
                     ${seccion.color === 'cyan'    ? 'bg-cyan-50    text-cyan-600    group-hover:bg-cyan-600    group-hover:text-white' : ''}
+                    ${seccion.color === 'orange'  ? 'bg-orange-50  text-orange-600  group-hover:bg-orange-600  group-hover:text-white' : ''}
                   `}>
                     {seccion.icono}
                   </div>
@@ -137,6 +139,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                       ${seccion.color === 'purple'  ? 'group-hover:text-purple-600'  : ''}
                       ${seccion.color === 'rose'    ? 'group-hover:text-rose-600'    : ''}
                       ${seccion.color === 'cyan'    ? 'group-hover:text-cyan-600'    : ''}
+                      ${seccion.color === 'orange'  ? 'group-hover:text-orange-600'  : ''}
                     `}>
                       {seccion.titulo}
                     </h3>
