@@ -37,7 +37,7 @@ export default function ChatIA() {
       // Enviamos el historial sin el mensaje de bienvenida inicial
       const mensajesParaAPI = historialActualizado.slice(1);
 
-      const res = await fetch('http://localhost:3001/api/chat-ia', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat-ia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
