@@ -108,7 +108,7 @@ export default function VistaAula({
   const persistirTablero = useCallback(async (pgn: string, fen: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`http://localhost:3001/api/aula/${aulaId}/tablero`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aula/${aulaId}/tablero`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

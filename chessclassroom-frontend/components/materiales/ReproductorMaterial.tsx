@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Minimize, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Material } from '@/types/materiales';
 
-const API = 'http://localhost:3001/api/materiales';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/materiales`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -183,7 +183,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
             <div className="w-full aspect-video">
               <iframe
                 className="w-full h-full rounded-xl"
-                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&enablejsapi=1&origin=http://localhost:3000`}
+                src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`}
                 title={material.nombre}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen

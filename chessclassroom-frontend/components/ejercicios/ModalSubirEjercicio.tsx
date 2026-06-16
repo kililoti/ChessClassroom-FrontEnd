@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertTriangle, Loader2, ClipboardPaste, Calendar } from 'lucide-react';
 
-const API = 'http://localhost:3001/api/ejercicios';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
 
 type Categoria = 'apertura' | 'tactica' | 'estrategia' | 'final' | 'partida' | 'calculo';
 

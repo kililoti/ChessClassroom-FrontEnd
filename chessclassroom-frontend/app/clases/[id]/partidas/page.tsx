@@ -8,7 +8,7 @@ import ModalCrearPartida from '@/components/partidas/ModalCrearPartida';
 import { usePartidasRealtime } from '@/hooks/usePartidaRealtime';
 import type { Partida } from '@/types/partidas';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

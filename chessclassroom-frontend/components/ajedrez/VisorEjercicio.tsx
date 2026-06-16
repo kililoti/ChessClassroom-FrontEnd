@@ -9,7 +9,7 @@ import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
 import { Chess } from 'chess.js';
 
-const API = 'http://localhost:3001/api/ejercicios';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

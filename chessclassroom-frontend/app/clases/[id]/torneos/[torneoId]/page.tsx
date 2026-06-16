@@ -10,7 +10,7 @@ import type { Partida } from '@/types/partidas';
 import { useTorneoActivo } from '@/contexts/TorneoActivoContext';
 import { useTorneoRealtime } from '@/hooks/useTorneoRealtime';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

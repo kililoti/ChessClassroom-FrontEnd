@@ -5,7 +5,7 @@
 import { useState, useRef } from 'react';
 import { X, Upload, Play, Image as ImageIcon, Video, AlertCircle, Loader2, Info } from 'lucide-react';
 
-const API = 'http://localhost:3001/api/materiales';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/materiales`;
 const MAX_TAMANIO_MB = 50;
 
 function getToken() {

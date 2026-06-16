@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, Calendar, Loader2, CalendarClock } from 'lucide-react';
 
-const API_EJ = 'http://localhost:3001/api/ejercicios';
+const API_EJ = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

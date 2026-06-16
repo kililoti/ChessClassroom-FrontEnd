@@ -16,8 +16,8 @@ import TarjetaMaterial from '@/components/materiales/TarjetaMaterial';
 import ModalSubirMaterial from '@/components/materiales/ModalSubirMaterial';
 import ReproductorMaterial from '@/components/materiales/ReproductorMaterial';
 
-const API_RECURSOS = 'http://localhost:3001/api/recursos';
-const API_MATERIALES = 'http://localhost:3001/api/materiales';
+const API_RECURSOS = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
+const API_MATERIALES = `${process.env.NEXT_PUBLIC_API_URL}/materiales`;
 const MODULO = 'material';
 
 function getToken() {

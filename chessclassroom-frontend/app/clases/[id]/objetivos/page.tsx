@@ -48,7 +48,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
         if (esProf) {
           // Profesor → cargar lista de alumnos
           const resAlumnos = await fetch(
-            `http://localhost:3001/api/clases/${claseId}/alumnos`,
+            `${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`,
             { headers }
           );
           if (resAlumnos.ok) {
@@ -81,8 +81,8 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
     try {
       setCargando(true);
       const url = idParaQuery
-        ? `http://localhost:3001/api/objetivos/tablones/${claseId}?alumnoId=${idParaQuery}`
-        : `http://localhost:3001/api/objetivos/tablones/${claseId}`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/objetivos/tablones/${claseId}?alumnoId=${idParaQuery}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/objetivos/tablones/${claseId}`;
 
       const res = await fetch(url, { headers });
       const data = await res.json();
@@ -102,7 +102,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleCrearTablon = async (titulo: string, descripcion: string, fechaLimite: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/tablones`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/tablones`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -122,7 +122,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleEliminarTablon = async (tablonId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/tablones/${tablonId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/tablones/${tablonId}`, {
         method: 'DELETE',
         headers,
       });
@@ -134,7 +134,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleAnadirObjetivo = async (tablonId: string, titulo: string, fechaLimite: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/${tablonId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/${tablonId}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -151,7 +151,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
   const handleAnadirObjetivoGrupal = async (tablonTitulo: string, titulo: string, fechaLimite: string) => {
     try {
       await fetch(
-        `http://localhost:3001/api/objetivos/grupo/${claseId}/${encodeURIComponent(tablonTitulo)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/objetivos/grupo/${claseId}/${encodeURIComponent(tablonTitulo)}`,
         {
           method: 'POST',
           headers,
@@ -169,7 +169,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleToggleObjetivo = async (objetivoId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/${objetivoId}/toggle`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/${objetivoId}/toggle`, {
         method: 'PATCH',
         headers,
       });
@@ -181,7 +181,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleEliminarObjetivo = async (objetivoId: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/${objetivoId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/${objetivoId}`, {
         method: 'DELETE',
         headers,
       });
@@ -193,7 +193,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
 
   const handleEditarTablon = async (tablonId: string, titulo: string, descripcion: string, fechaLimite: string) => {
     try {
-      await fetch(`http://localhost:3001/api/objetivos/tablones/${tablonId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/objetivos/tablones/${tablonId}`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({

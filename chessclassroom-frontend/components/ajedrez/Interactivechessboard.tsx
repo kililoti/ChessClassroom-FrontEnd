@@ -247,13 +247,13 @@ export default function InteractiveChessBoard() {
               allowDragging: !isGameOver,
 
               // v5: onSquareClick — (square: string, piece?: string) => void
-              onSquareClick: handleSquareClick,
+/*               onSquareClick: handleSquareClick,
 
               // v5: onPieceDrag (antes onPieceDragBegin) — ({ piece, square }) => void
               onPieceDrag: handlePieceDrag,
 
               // v5: onPieceDrop — ({ piece, sourceSquare, targetSquare }) => boolean
-              onPieceDrop: handlePieceDrop,
+              onPieceDrop: handlePieceDrop, */
 
               // v5: boardStyle (antes customBoardStyle)
               boardStyle: {

@@ -9,7 +9,7 @@ import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

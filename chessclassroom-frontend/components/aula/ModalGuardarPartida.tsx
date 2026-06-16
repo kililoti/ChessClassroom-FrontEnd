@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { X, AlertTriangle, Loader2, Plus, ChevronRight, ArrowLeft, Calendar } from 'lucide-react';
 import { Categoria, CATEGORIA_LABELS } from '@/types/explorador';
 
-const API_RECURSOS  = 'http://localhost:3001/api/recursos';
-const API_EJERCICIOS = 'http://localhost:3001/api/ejercicios';
+const API_RECURSOS  = `${process.env.NEXT_PUBLIC_API_URL}/recursos`;
+const API_EJERCICIOS = `${process.env.NEXT_PUBLIC_API_URL}/ejercicios`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

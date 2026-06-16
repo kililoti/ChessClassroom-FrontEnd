@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Swords, X, Check, Loader2 } from 'lucide-react';
 import { useChallenges } from '@/contexts/ChallengesContext';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';

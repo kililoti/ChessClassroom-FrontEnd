@@ -92,7 +92,7 @@ export function LiveKitProvider({
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:3001/api/livekit/token/${aulaIdNuevo}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/livekit/token/${aulaIdNuevo}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -235,7 +235,7 @@ export function LiveKitProvider({
     try {
       if (muted) {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:3001/api/livekit/${aulaId}/mutear/${identity}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/livekit/${aulaId}/mutear/${identity}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ muted: true })

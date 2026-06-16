@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Trash2, Pencil, Play, Image as ImageIcon, Check, X } from 'lucide-react';
 import { Material, ICONOS_TIPO, ETIQUETAS_TIPO, formatFechaMaterial, formatTamanio } from '@/types/materiales';
 
-const API = 'http://localhost:3001/api/materiales';
+const API = `${process.env.NEXT_PUBLIC_API_URL}/materiales`;
 const IMAGEN_DEFECTO = '/imagenes/material-default-ajedrez.jpg'; // imagen de respaldo relacionada con ajedrez
 
 function getToken() {

@@ -42,8 +42,8 @@ export default function ParticularesPage() {
     setRolUsuario(user.rol);
     
     const endpoint = user.rol === 'profesor' 
-      ? `http://localhost:3001/api/clases/profesor/${user.id}`
-      : `http://localhost:3001/api/clases/alumno/${user.id}`;
+      ? `${process.env.NEXT_PUBLIC_API_URL}/clases/profesor/${user.id}`
+      : `${process.env.NEXT_PUBLIC_API_URL}/clases/alumno/${user.id}`;
 
     fetch(endpoint)
       .then((res) => {
@@ -69,7 +69,7 @@ export default function ParticularesPage() {
     setClases(clases.map(c => c.id === id ? { ...c, activo: nuevoEstado } : c));
 
     try {
-      const res = await fetch(`http://localhost:3001/api/clases/${id}/estado`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${id}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo: nuevoEstado }),
@@ -89,7 +89,7 @@ export default function ParticularesPage() {
     const user = JSON.parse(localStorage.getItem('usuario') || '{}');
 
     try {
-      const res = await fetch('http://localhost:3001/api/clases/crear', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/crear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
