@@ -1,4 +1,3 @@
-
 'use client';
  
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,6 +12,13 @@ interface Alumno {
   id: string;
   nombre: string;
   apellidos: string;
+}
+
+interface TorneoCalendario {
+  id: string;
+  nombre: string;
+  fecha_inicio: string | null;
+  fecha_fin: string | null;
 }
  
 const formatearFechaLocal = (d: Date): string => {
@@ -30,15 +36,59 @@ const getLunes = (fecha: Date): string => {
   d.setDate(d.getDate() + diff);
   return formatearFechaLocal(d);
 };
+
+interface EntregaCalendario {
+  fecha: string;
+  carpetas: string[];
+}
+
+function entregaAEvento(entrega: EntregaCalendario, claseId: string): EventoCalendario {
+  return {
+    id:            `entrega-${entrega.fecha}`,
+    clase_id:      claseId,
+    alumno_id:     null,
+    titulo:        'Deberes',
+    descripcion:   entrega.carpetas.join(', '),
+    tipo:          'deberes',
+    fecha_inicio:  entrega.fecha,
+    fecha_fin:     null,
+    deadline:      entrega.fecha,
+    se_repite:     false,
+    rango_inicio:  null,
+    rango_fin:     null,
+    dias_semana:   null,
+    origen_grupal: true,
+    creado_en:     entrega.fecha,
+  };
+}
+
+function torneoAEvento(torneo: TorneoCalendario, claseId: string): EventoCalendario {
+  return {
+    id:            `torneo-${torneo.id}`,
+    clase_id:      claseId,
+    alumno_id:     null,
+    titulo:        torneo.nombre,
+    tipo:          'torneo',
+    fecha_inicio:  torneo.fecha_inicio ?? '',
+    fecha_fin:     torneo.fecha_fin ?? null,
+    deadline:      null,
+    se_repite:     false,
+    rango_inicio:  null,
+    rango_fin:     null,
+    dias_semana:   null,
+    origen_grupal: true,
+    creado_en:     torneo.fecha_inicio ?? '',
+  };
+}
  
 export default function RutinasPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id: claseId } = React.use(params);
  
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
-  // rutinas: para el checklist lateral (una semana)
+  const [torneos, setTorneos] = useState<TorneoCalendario[]>([]);
+  const [entregas, setEntregas] = useState<EntregaCalendario[]>([]);
   const [rutinas, setRutinas] = useState<RutinaChecklist[]>([]);
-  // rutinasCalendario: para los ticks del calendario (mes completo)
   const [rutinasCalendario, setRutinasCalendario] = useState<RutinaChecklist[]>([]);
  
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
@@ -48,7 +98,6 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   const [mostrarModalEvento, setMostrarModalEvento] = useState(false);
   const [semanaActual, setSemanaActual] = useState(getLunes(new Date()));
   const [inicializado, setInicializado] = useState(false);
-  // mes visible en el calendario — para saber qué mes cargar para los ticks
   const [mesCalendario, setMesCalendario] = useState<{ anio: number; mes: number }>({
     anio: new Date().getFullYear(),
     mes: new Date().getMonth(),
@@ -101,8 +150,40 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   };
  
   const volverSemanaActual = () => setSemanaActual(getLunes(new Date()));
+
+  // Cargar torneos de la clase para mostrarlos en el calendario
+  const cargarTorneos = useCallback(async () => {
+    if (!inicializado) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/torneos`,
+        { headers }
+      );
+      if (res.ok) {
+        const d = await res.json();
+        setTorneos(d.torneos ?? []);
+      }
+    } catch (err) {
+      console.error('Error al cargar torneos:', err);
+    }
+  }, [claseId, inicializado]);
  
-  // Cargar eventos
+  const cargarEntregas = useCallback(async () => {
+    if (!inicializado) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/ejercicios/entregas-calendario/${claseId}`,
+        { headers }
+      );
+      if (res.ok) {
+        const d = await res.json();
+        setEntregas(d.entregas ?? []);
+      }
+    } catch (err) {
+      console.error('Error al cargar entregas:', err);
+    }
+  }, [claseId, inicializado]);
+
   const cargarEventos = useCallback(async () => {
     if (!inicializado) return;
     if (!esProfesor && !miId) return;
@@ -117,7 +198,6 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     }
   }, [claseId, idParaQuery, inicializado, esProfesor, miId]);
  
-  // Cargar checklist lateral (semana única)
   const cargarRutinas = useCallback(async () => {
     if (!inicializado) return;
     if (!esProfesor && !miId) return;
@@ -132,10 +212,9 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     }
   }, [claseId, idParaQuery, semanaActual, inicializado, esProfesor, miId]);
  
-  // Cargar rutinas del mes completo para los ticks del calendario
   const cargarRutinasCalendario = useCallback(async () => {
     if (!inicializado) return;
-    if (!idParaQuery) return; // solo cuando hay alumno concreto seleccionado
+    if (!idParaQuery) return;
     try {
       const mesAnio = `${mesCalendario.anio}-${String(mesCalendario.mes + 1).padStart(2, '0')}`;
       const url = `${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${claseId}?alumnoId=${idParaQuery}&mesAnio=${mesAnio}`;
@@ -146,6 +225,8 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     }
   }, [claseId, idParaQuery, mesCalendario, inicializado]);
  
+  useEffect(() => { cargarTorneos(); }, [cargarTorneos]);
+  useEffect(() => { cargarEntregas(); }, [cargarEntregas]);
   useEffect(() => { cargarEventos(); }, [cargarEventos]);
   useEffect(() => { cargarRutinas(); }, [cargarRutinas]);
   useEffect(() => { cargarRutinasCalendario(); }, [cargarRutinasCalendario]);
@@ -165,6 +246,8 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   };
  
   const handleEliminarEvento = async (eventoId: string, soloEste: boolean, desdeGrupo: boolean) => {
+    // Los torneos y entregas no se pueden eliminar desde el calendario
+    if (eventoId.startsWith('torneo-') || eventoId.startsWith('entrega-')) return;
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/rutinas/eventos/${eventoId}?soloEste=${soloEste}&desdeGrupo=${desdeGrupo}`,
@@ -204,11 +287,19 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/rutinas/checklist/${semanaId}/toggle`, { method: 'PATCH', headers });
       cargarRutinas();
-      cargarRutinasCalendario(); // recargar también el calendario para actualizar ticks
+      cargarRutinasCalendario();
     } catch (err) {
       console.error('Error al toggle rutina:', err);
     }
   };
+
+  // Mezclar eventos normales con los torneos convertidos a evento
+  const eventosTorneos = torneos
+    .filter(t => t.fecha_inicio)
+    .map(t => torneoAEvento(t, claseId));
+
+  const eventosEntregas = entregas.map(e => entregaAEvento(e, claseId));
+  const todosLosEventos = [...eventos, ...eventosTorneos, ...eventosEntregas];
  
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8 font-sans">
@@ -263,7 +354,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
             <CalendarioMensual
-              eventos={eventos}
+              eventos={todosLosEventos}
               rutinas={rutinasCalendario}
               esProfesor={esProfesor}
               esVistaGrupal={esProfesor && !alumnoSeleccionado}
