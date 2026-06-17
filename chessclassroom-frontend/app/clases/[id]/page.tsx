@@ -51,15 +51,25 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
       </div>
     );
   }
+
+  // En particular: Jugar va directo a /partidas (no hay torneos entre 2 personas)
+  // En grupal:     Jugar va a /jugar (hub con partidas + torneos)
+  const rutaJugar = clase.tipo === 'particular'
+    ? `/clases/${clase.id}/partidas`
+    : `/clases/${clase.id}/jugar`;
+
+  const descJugar = clase.tipo === 'particular'
+    ? 'Juega una partida contra tu profesor'
+    : 'Juega en vivo o participa en torneos';
  
   const secciones = [
-    { titulo: 'Sala Virtual',       ruta: `/clases/${clase.id}/aula`,  icono: '💻', color: 'blue',    desc: 'Pizarra interactiva y videollamada' },
+    { titulo: 'Sala Virtual',       ruta: `/clases/${clase.id}/aula`,          icono: '💻', color: 'blue',    desc: 'Pizarra interactiva y videollamada' },
     { titulo: 'Estudio',            ruta: `/clases/${clase.id}/estudios`,       icono: '📚', color: 'indigo',  desc: 'Archivos PDF, teoría y recursos' },
     { titulo: 'Ejercicios',         ruta: `/clases/${clase.id}/ejercicios`,     icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
-    { titulo: 'Jugar',           ruta: `/clases/${clase.id}/jugar`,       icono: '♟️', color: 'amber',   desc: 'Juega en vivo o revisa el historial' },
-    { titulo: 'Estadísticas',        ruta: `/clases/${clase.id}/estadisticas`,   icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
+    { titulo: 'Jugar',              ruta: rutaJugar,                            icono: '♟️', color: 'amber',   desc: descJugar },
+    { titulo: 'Estadísticas',       ruta: `/clases/${clase.id}/estadisticas`,   icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
     { titulo: 'Objetivos',          ruta: `/clases/${clase.id}/objetivos`,      icono: '🎯', color: 'rose',    desc: 'Metas a superar a corto y largo plazo' },
-    { titulo: 'Calendario',             ruta: `/clases/${clase.id}/rutinas`,        icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
+    { titulo: 'Calendario',         ruta: `/clases/${clase.id}/rutinas`,        icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
     { titulo: 'Material Adicional', ruta: `/clases/${clase.id}/material`,       icono: '📁', color: 'teal',    desc: 'Recursos y archivos complementarios' },
   ];
  
@@ -136,7 +146,6 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
           <div className="lg:col-span-7 xl:col-span-8">
             <div className="grid sm:grid-cols-2 gap-5">
 
-              {/* Tarjetas de secciones */}
               {secciones.map((seccion, index) => (
                 <Link
                   key={index}
@@ -155,7 +164,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                 </Link>
               ))}
 
-              {/* Gestión de alumnos — solo en clases grupales, ocupa las 2 columnas */}
+              {/* Gestión de alumnos — solo clases grupales, ancho completo */}
               {clase.tipo === 'grupal' && (
                 <Link
                   href={`/clases/${clase.id}/alumnos`}
