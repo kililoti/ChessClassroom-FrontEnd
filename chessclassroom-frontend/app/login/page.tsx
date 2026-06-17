@@ -46,6 +46,7 @@ function LoginForm() {
       }
 
       localStorage.setItem('token', data.data.token);
+      localStorage.setItem('refresh_token', data.data.refresh_token);
       localStorage.setItem('usuario', JSON.stringify(data.data.usuario));
 
       setStatus({ loading: false, error: '', success: '¡Bienvenido! Redirigiendo...' });
