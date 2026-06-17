@@ -22,7 +22,7 @@ export interface VistaAulaProps {
   onEmitirRef?: (emitir: (evento: EventoAula) => void) => void;
   onStockfishRecibido?: (lineas: LineaAnalisis[], flechas: FletchaStockfish[]) => void;
   onSolicitarStockfish?: () => void;
-  // Props de display Stockfish — gestionado por AulaPage
+  // Props de display Stockfish — gestionado por AulaPage (solo profesor)
   flechasStockfish?: FletchaStockfish[];
   mostrarEvalBar?: boolean;
   evalLinea?: LineaAnalisis | null;
@@ -53,6 +53,11 @@ export default function VistaAula({
   const [puedeBlancas, setPuedeBlancas] = useState(permisosIniciales?.puede_mover_blancas ?? false);
   const [puedeNegras, setPuedeNegras]   = useState(permisosIniciales?.puede_mover_negras  ?? false);
 
+  // ── CAMBIO 1: estado local del Stockfish recibido (solo alumnos) ──────────
+  const [evalLineaAlumno, setEvalLineaAlumno]     = useState<LineaAnalisis | null>(null);
+  const [mostrarEvalAlumno, setMostrarEvalAlumno] = useState(false);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const {
     pgn, fenVisible, estilosCombinados,
     indiceVista, setIndiceVista,
@@ -66,7 +71,7 @@ export default function VistaAula({
     cargarPgn, reiniciar,
   } = useChessGame({ pgnInicial });
 
-  const flechasTablero = flechasStockfish; // profesor: sus flechas; alumno: flechas recibidas del profesor
+  const flechasTablero = flechasStockfish;
   const turnoBlancas   = fenVisible.split(' ')[1] === 'w';
   const numeroJugada   = parseInt(fenVisible.split(' ')[5], 10) || 1;
 
@@ -106,16 +111,20 @@ export default function VistaAula({
           setPuedeNegras(evento.puede_mover_negras);
         }
         break;
+
+      // ── CAMBIO 2: guardar eval y flechas localmente en el alumno ──────────
       case 'STOCKFISH':
         if (!esProfesor) {
-          onStockfishRecibido?.(
-            evento.activo ? evento.lineas : [],
-            evento.activo ? evento.flechas : [],
-          );
+          const lineas  = evento.activo ? evento.lineas  : [];
+          const flechas = evento.activo ? evento.flechas : [];
+          onStockfishRecibido?.(lineas, flechas);
+          setEvalLineaAlumno(lineas[0] ?? null);
+          setMostrarEvalAlumno(evento.activo && lineas.length > 0);
         }
         break;
+      // ──────────────────────────────────────────────────────────────────────
+
       case 'SOLICITAR_STOCKFISH':
-        // El profesor recibe la solicitud y responde via AulaPage
         if (esProfesor) onSolicitarStockfish?.();
         break;
     }
@@ -125,12 +134,9 @@ export default function VistaAula({
 
   useEffect(() => { onEmitirRef?.(emitir); }, [emitir, onEmitirRef]);
 
-  // Alumno: al conectarse solicita el estado actual de Stockfish al profesor
   useEffect(() => {
     if (esProfesor) return;
-    const t = setTimeout(() => {
-      emitir({ tipo: 'SOLICITAR_STOCKFISH' });
-    }, 1500); // esperar a que el canal esté suscrito
+    const t = setTimeout(() => { emitir({ tipo: 'SOLICITAR_STOCKFISH' }); }, 1500);
     return () => clearTimeout(t);
   }, [esProfesor, emitir]);
 
@@ -220,6 +226,11 @@ export default function VistaAula({
     if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: totalMoves, sonido: sonidoDeIndice(totalMoves) });
   }, [irAlFinal, esProfesor, pgn, totalMoves, emitir, sonidoDeIndice]);
 
+  // ── CAMBIO 3: valores efectivos según rol ─────────────────────────────────
+  const evalLineaEfectiva  = esProfesor ? evalLinea    : evalLineaAlumno;
+  const mostrarEvalEfectivo = esProfesor ? mostrarEvalBar : mostrarEvalAlumno;
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
 
@@ -261,19 +272,20 @@ export default function VistaAula({
       {/* Tablero + Planilla */}
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-stretch justify-center">
 
-        {/* Tablero con barra de evaluación opcional */}
+        {/* ── CAMBIO 4: usar valores efectivos en lugar de los props directos ── */}
         <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c] flex">
-          {mostrarEvalBar && evalLinea && (
+          {mostrarEvalEfectivo && evalLineaEfectiva && (
             <div className="w-5 shrink-0 border-r-4 border-[#302e2c]">
               <EvalBarVertical
-                evaluacion={evalLinea.evaluacion}
-                mate={evalLinea.mate ?? null}
+                evaluacion={evalLineaEfectiva.evaluacion}
+                mate={evalLineaEfectiva.mate ?? null}
                 turnoBlancas={turnoBlancas}
                 orientation={orientacion}
                 activo={true}
               />
             </div>
           )}
+          {/* ────────────────────────────────────────────────────────────────── */}
           <div className="flex-1">
             <ChessboardCore
               key={`${puedeBlancas}-${puedeNegras}`}
