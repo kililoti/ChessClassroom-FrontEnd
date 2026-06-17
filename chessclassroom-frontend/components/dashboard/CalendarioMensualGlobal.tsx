@@ -39,19 +39,18 @@ function getToken() {
 }
 
 export default function CalendarioMensualGlobal() {
-  const hoy    = new Date();
-  const hoyDia = hoy.getDate();
-  const hoyMes = hoy.getMonth();
+  const hoy     = new Date();
+  const hoyDia  = hoy.getDate();
+  const hoyMes  = hoy.getMonth();
   const hoyAnio = hoy.getFullYear();
 
   const [mes, setMes]   = useState(hoyMes);
   const [anio, setAnio] = useState(hoyAnio);
   const [eventos, setEventos]   = useState<EventoCalendario[]>([]);
   const [cargando, setCargando] = useState(false);
-  const [eventoSeleccionado, setEventoSeleccionado] = useState<EventoCalendario | null>(null);
-  const [mostrarEventosDia, setMostrarEventosDia]   = useState<{ dia: number; eventos: EventoCalendario[] } | null>(null);
+  const [eventoSeleccionado, setEventoSeleccionado]   = useState<EventoCalendario | null>(null);
+  const [mostrarEventosDia, setMostrarEventosDia] = useState<{ dia: number; eventos: EventoCalendario[] } | null>(null);
 
-  // Cargar eventos del mes
   const cargarEventos = useCallback(async () => {
     setCargando(true);
     try {
@@ -67,10 +66,9 @@ export default function CalendarioMensualGlobal() {
 
   useEffect(() => { cargarEventos(); }, [cargarEventos]);
 
-  // Celdas del mes
-  const primerDia  = new Date(anio, mes, 1);
-  const diaInicio  = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1;
-  const totalDias  = new Date(anio, mes + 1, 0).getDate();
+  const primerDia = new Date(anio, mes, 1);
+  const diaInicio = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1;
+  const totalDias = new Date(anio, mes + 1, 0).getDate();
   const celdas: (number | null)[] = Array.from({ length: diaInicio + totalDias }, (_, i) =>
     i < diaInicio ? null : i - diaInicio + 1
   );
@@ -148,9 +146,7 @@ export default function CalendarioMensualGlobal() {
                           <button
                             key={e.id}
                             onClick={() => setEventoSeleccionado(e)}
-                            className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate cursor-pointer
-                              ${colorTipo[e.tipo]}
-                            `}
+                            className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate cursor-pointer ${colorTipo[e.tipo]}`}
                           >
                             {e.titulo}
                           </button>
@@ -207,6 +203,9 @@ export default function CalendarioMensualGlobal() {
                     <span className="text-[10px] opacity-60">{e.clase_nombre}</span>
                   </div>
                   <span className="block">{e.titulo}</span>
+                  {e.descripcion && (
+                    <span className="block text-xs opacity-70 mt-0.5">{e.descripcion}</span>
+                  )}
                   {e.tipo !== 'deberes' && (
                     <span className="block text-xs opacity-70 mt-0.5">
                       {formatHora(e.fecha_inicio)}{e.fecha_fin ? ` — ${formatHora(e.fecha_fin)}` : ''}
@@ -235,7 +234,6 @@ export default function CalendarioMensualGlobal() {
                   `}>
                     {eventoSeleccionado.tipo}
                   </span>
-                  {/* Nombre del grupo/clase */}
                   {eventoSeleccionado.clase_nombre && (
                     <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
                       {eventoSeleccionado.clase_nombre}
@@ -243,6 +241,9 @@ export default function CalendarioMensualGlobal() {
                   )}
                 </div>
                 <h3 className="font-bold text-slate-800">{eventoSeleccionado.titulo}</h3>
+                {eventoSeleccionado.descripcion && (
+                  <p className="text-xs text-slate-500 mt-0.5">{eventoSeleccionado.descripcion}</p>
+                )}
               </div>
               <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
