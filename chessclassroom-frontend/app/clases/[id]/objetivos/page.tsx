@@ -218,7 +218,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600"
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600 cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6"/>
@@ -244,7 +244,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
               <select
                 value={alumnoSeleccionado}
                 onChange={(e) => setAlumnoSeleccionado(e.target.value)}
-                className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-700"
+                className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-700 cursor-pointer"
               >
                 <option value="">Grupo completo</option>
                 {alumnos.map(a => (
@@ -259,7 +259,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
             {esProfesor && (
               <button
                 onClick={() => setMostrarModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-xl hover:bg-rose-600 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-xl hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Nuevo tablón
               </button>

@@ -130,7 +130,7 @@ export default function TarjetaTorneo({ torneo, usuarioId, esProfesor, onEntrar,
             {puedeEditar && onEditar && (
               <button
                 onClick={editar}
-                className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                 title="Editar torneo"
               >
                 <Pencil className="w-4 h-4" />
@@ -141,7 +141,7 @@ export default function TarjetaTorneo({ torneo, usuarioId, esProfesor, onEntrar,
               <button
                 onClick={eliminar}
                 disabled={eliminando}
-                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 title="Eliminar"
               >
                 {eliminando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

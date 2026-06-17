@@ -751,14 +751,14 @@ export default function VistaPartida({
               </div>
               <button
                 onClick={() => setBannerFin(false)}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <X className="w-4 h-4" /> Revisar la partida
               </button>
               {onVolver && (
                 <button
                   onClick={onVolver}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Trophy className="w-4 h-4" /> Volver al torneo
                 </button>
@@ -826,13 +826,13 @@ export default function VistaPartida({
                     <button
                       onClick={ofrecerTablas}
                       disabled={yoOfreciTablas}
-                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-40"
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
                     >
                       <Handshake className="w-4 h-4" /> Ofrecer tablas
                     </button>
                     <button
                       onClick={abandonar}
-                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer"
                     >
                       <Flag className="w-4 h-4" /> Abandonar
                     </button>
@@ -840,7 +840,7 @@ export default function VistaPartida({
                 )}
                 <button
                   onClick={handleGirar}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors shadow-sm cursor-pointer"
                   title="Girar tablero"
                 >
                   <RotateCcw className="w-4 h-4" /> Girar tablero

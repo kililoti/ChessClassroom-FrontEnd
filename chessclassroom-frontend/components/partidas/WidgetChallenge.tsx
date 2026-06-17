@@ -77,7 +77,7 @@ const aceptar = async () => {
           </div>
           <button
             onClick={rechazar}
-            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -94,14 +94,14 @@ const aceptar = async () => {
           <button
             onClick={rechazar}
             disabled={rechazando || aceptando}
-            className="flex-1 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-40"
+            className="flex-1 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
           >
             {rechazando ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Rechazar'}
           </button>
           <button
             onClick={aceptar}
             disabled={aceptando || rechazando}
-            className="flex-1 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {aceptando
               ? <Loader2 className="w-4 h-4 animate-spin" />

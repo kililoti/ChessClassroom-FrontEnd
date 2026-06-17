@@ -142,7 +142,7 @@ export default function WidgetEmparejamiento({ torneoId, claseId }: Props) {
         <button
           onClick={irAPartida}
           disabled={yendo}
-          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+          className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
         >
           {yendo
             ? <Loader2 className="w-4 h-4 animate-spin" />

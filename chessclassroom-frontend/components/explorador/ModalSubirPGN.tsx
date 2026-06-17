@@ -99,7 +99,7 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
 
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-slate-900">Subir archivo PGN</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         {error && (
@@ -140,7 +140,7 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); quitarArchivo(i); }}
-                        className="ml-2 text-slate-400 hover:text-red-500 shrink-0"
+                        className="ml-2 text-slate-400 hover:text-red-500 shrink-0 cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -148,7 +148,7 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
                   ))}
                   <button
                     onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}
-                    className="text-xs text-blue-500 hover:text-blue-700 font-semibold mt-1"
+                    className="text-xs text-blue-500 hover:text-blue-700 font-semibold mt-1 cursor-pointer"
                   >
                     + Añadir más archivos
                   </button>
@@ -223,7 +223,7 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {categorias.map(([key, { label, color }]) => (
                 <button key={key} type="button" onClick={() => setCategoria(key)}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left ${
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold border-2 transition-all text-left cursor-pointer ${
                     categoria === key ? `${color} border-current` : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300'
                   }`}
                 >
@@ -246,13 +246,13 @@ export default function ModalSubirPGN({ carpetaId, onClose, onSubido }: Props) {
         )}
 
         <div className="flex gap-2 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors cursor-pointer">
             Cancelar
           </button>
           <button
             onClick={handleSubir} disabled={!puedeSubir}
             title={hayConflicto ? 'Elimina el archivo o borra el texto para continuar' : !categoria ? 'Selecciona una categoría' : ''}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {tieneArchivos && archivos.length > 1 ? `Subir ${archivos.length} archivos` : 'Subir'}

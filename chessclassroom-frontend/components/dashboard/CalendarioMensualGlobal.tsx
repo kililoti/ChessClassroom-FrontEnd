@@ -101,14 +101,14 @@ export default function CalendarioMensualGlobal() {
 
       {/* Cabecera */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-        <button onClick={anteriorMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+        <button onClick={anteriorMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
           <ChevronLeft className="w-4 h-4 text-slate-600" />
         </button>
         <div className="text-center">
           <h2 className="font-bold text-slate-800">{MESES[mes]} {anio}</h2>
           {cargando && <span className="text-xs text-slate-400">Cargando...</span>}
         </div>
-        <button onClick={siguienteMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+        <button onClick={siguienteMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
           <ChevronRight className="w-4 h-4 text-slate-600" />
         </button>
       </div>
@@ -148,7 +148,7 @@ export default function CalendarioMensualGlobal() {
                           <button
                             key={e.id}
                             onClick={() => setEventoSeleccionado(e)}
-                            className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate
+                            className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate cursor-pointer
                               ${colorTipo[e.tipo]}
                             `}
                           >
@@ -158,7 +158,7 @@ export default function CalendarioMensualGlobal() {
                         {hayMas && (
                           <button
                             onClick={() => setMostrarEventosDia({ dia, eventos: eventosDelDia })}
-                            className="text-[10px] text-blue-500 hover:text-blue-700 pl-1 font-medium"
+                            className="text-[10px] text-blue-500 hover:text-blue-700 pl-1 font-medium cursor-pointer"
                           >
                             +{eventosDelDia.length - 2} más
                           </button>
@@ -194,13 +194,13 @@ export default function CalendarioMensualGlobal() {
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-800">Día {mostrarEventosDia.dia} de {MESES[mes]}</h3>
-              <button onClick={() => setMostrarEventosDia(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setMostrarEventosDia(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
             <div className="space-y-2">
               {mostrarEventosDia.eventos.map(e => (
                 <button key={e.id}
                   onClick={() => { setEventoSeleccionado(e); setMostrarEventosDia(null); }}
-                  className={`w-full text-left text-sm font-medium px-3 py-2 rounded-xl border ${colorTipo[e.tipo]}`}
+                  className={`w-full text-left text-sm font-medium px-3 py-2 rounded-xl border cursor-pointer ${colorTipo[e.tipo]}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="capitalize font-semibold">{e.tipo}</span>
@@ -244,7 +244,7 @@ export default function CalendarioMensualGlobal() {
                 </div>
                 <h3 className="font-bold text-slate-800">{eventoSeleccionado.titulo}</h3>
               </div>
-              <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
 
             {eventoSeleccionado.tipo !== 'deberes' && (

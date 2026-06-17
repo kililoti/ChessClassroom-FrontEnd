@@ -220,7 +220,7 @@ export default function TorneoPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push(`/clases/${claseId}/torneos`)}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600"
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600 cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6"/>
@@ -252,7 +252,7 @@ export default function TorneoPage() {
               <button
                 onClick={eliminar}
                 disabled={eliminando}
-                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                 title="Eliminar torneo"
               >
                 {eliminando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -298,7 +298,7 @@ export default function TorneoPage() {
               <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit shadow-sm">
                 <button
                   onClick={() => { setTab('activas'); setFiltroParticipanteId('todos'); }}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     tab === 'activas' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -306,7 +306,7 @@ export default function TorneoPage() {
                 </button>
                 <button
                   onClick={() => setTab('historial')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     tab === 'historial' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >

@@ -59,7 +59,7 @@ export default function DashboardPage() {
             </span>
             <button 
               onClick={handleLogout}
-              className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors">
+              className="text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors cursor-pointer">
               Cerrar sesión
             </button>
           </div>

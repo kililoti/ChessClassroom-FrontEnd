@@ -107,7 +107,7 @@ export default function EstadisticasPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0"
+              className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0 cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>

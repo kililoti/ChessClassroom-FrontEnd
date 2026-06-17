@@ -117,11 +117,11 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
  
       {/* Cabecera mes */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-        <button onClick={anteriorMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+        <button onClick={anteriorMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
           <ChevronLeft className="w-4 h-4 text-slate-600" />
         </button>
         <h2 className="font-bold text-slate-800">{MESES[mes]} {anio}</h2>
-        <button onClick={siguienteMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+        <button onClick={siguienteMes} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
           <ChevronRight className="w-4 h-4 text-slate-600" />
         </button>
       </div>
@@ -182,7 +182,7 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                             <button
                               key={e.id}
                               onClick={() => setEventoSeleccionado(e)}
-                              className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate ${colorTipo[e.tipo]}`}
+                              className={`w-full text-left text-[10px] font-medium px-1 py-0.5 rounded border truncate cursor-pointer ${colorTipo[e.tipo]}`}
                             >
                               {e.titulo}
                             </button>
@@ -190,7 +190,7 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                           {hayMas && (
                             <button
                               onClick={() => setMostrarEventosDia({ dia, eventos: eventosDelDia })}
-                              className="text-[10px] text-blue-500 hover:text-blue-700 pl-1 font-medium"
+                              className="text-[10px] text-blue-500 hover:text-blue-700 pl-1 font-medium cursor-pointer"
                             >
                               +{eventosDelDia.length - 2} más
                             </button>
@@ -225,12 +225,12 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
           <div className="bg-white rounded-2xl shadow-xl p-5 mx-4 w-full max-w-sm max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-800">Día {mostrarEventosDia.dia} de {MESES[mes]}</h3>
-              <button onClick={() => setMostrarEventosDia(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setMostrarEventosDia(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
             <div className="space-y-2">
               {mostrarEventosDia.eventos.map(e => (
                 <button key={e.id} onClick={() => { setEventoSeleccionado(e); setMostrarEventosDia(null); }}
-                  className={`w-full text-left text-sm font-medium px-3 py-2 rounded-xl border ${colorTipo[e.tipo]}`}>
+                  className={`w-full text-left text-sm font-medium px-3 py-2 rounded-xl border cursor-pointer ${colorTipo[e.tipo]}`}>
                   <span className="capitalize font-semibold">{e.tipo}</span> — {e.titulo}
                   {e.tipo !== 'deberes' && (
                     <span className="block text-xs opacity-70 mt-0.5">
@@ -257,7 +257,7 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                 `}>{eventoSeleccionado.tipo}</span>
                 <h3 className="font-bold text-slate-800 mt-1">{eventoSeleccionado.titulo}</h3>
               </div>
-              <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
             {eventoSeleccionado.tipo !== 'deberes' && (
               <p className="text-sm text-slate-600">
@@ -273,12 +273,12 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
             {esProfesor && (
               <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3">
                 <button onClick={() => { onEliminar(eventoSeleccionado.id, true, esVistaGrupal); setEventoSeleccionado(null); }}
-                  className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 transition-colors">
+                  className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 transition-colors cursor-pointer">
                   <Trash2 className="w-4 h-4" /> Eliminar este día
                 </button>
                 {eventoSeleccionado.se_repite && (
                   <button onClick={() => { onEliminar(eventoSeleccionado.id, false, esVistaGrupal); setEventoSeleccionado(null); }}
-                    className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-800 transition-colors font-medium">
+                    className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-800 transition-colors font-medium cursor-pointer">
                     <Trash2 className="w-4 h-4" /> Eliminar todos los días
                   </button>
                 )}

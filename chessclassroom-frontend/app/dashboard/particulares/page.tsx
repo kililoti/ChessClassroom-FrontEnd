@@ -195,7 +195,7 @@ export default function ParticularesPage() {
                               e.stopPropagation();
                               handleCopiarEnlace(clase.codigo_invitacion, clase.id);
                             }}
-                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                               copiadoId === clase.id 
                                 ? 'bg-green-100 text-green-700 border border-green-200' 
                                 : 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100'
@@ -235,7 +235,7 @@ export default function ParticularesPage() {
                   <button
                     onClick={() => setPaginaActual((prev) => Math.max(prev - 1, 1))}
                     disabled={paginaActual === 1}
-                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
                   >
                     <span>←</span> Anterior
                   </button>
@@ -247,7 +247,7 @@ export default function ParticularesPage() {
                   <button
                     onClick={() => setPaginaActual((prev) => Math.min(prev + 1, totalPaginas))}
                     disabled={paginaActual === totalPaginas}
-                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
                   >
                     Siguiente <span>→</span>
                   </button>
@@ -283,13 +283,13 @@ export default function ParticularesPage() {
                 <button 
                   type="button" 
                   onClick={() => setMostrarFormulario(false)}
-                  className="px-5 py-2.5 text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-sm cursor-pointer"
                 >
                   Crear clase
                 </button>
@@ -303,7 +303,7 @@ export default function ParticularesPage() {
             {rolUsuario === 'profesor' ? (
               <button 
                 onClick={() => setMostrarFormulario(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-sm cursor-pointer"
               >
                 Crear clase
               </button>
@@ -313,7 +313,7 @@ export default function ParticularesPage() {
             
             <button 
               onClick={() => router.push('/dashboard')}
-              className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-6 rounded-lg border border-slate-300 transition-colors shadow-sm"
+              className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-6 rounded-lg border border-slate-300 transition-colors shadow-sm cursor-pointer"
             >
               Volver
             </button>

@@ -159,7 +159,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
       {/* Cabecera */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors cursor-pointer">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h2 className="text-white font-bold truncate max-w-[60vw]">{material.nombre}</h2>
@@ -229,7 +229,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
               />
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <button onClick={togglePlay} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors">
+                  <button onClick={togglePlay} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer">
                     {reproduciendo ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                   <span className="text-xs text-slate-400 font-mono">
@@ -237,7 +237,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={toggleMute} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors">
+                  <button onClick={toggleMute} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer">
                     {muteado || volumen === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   </button>
                   <input
@@ -251,7 +251,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
                   {VELOCIDADES.map(v => (
                     <button
                       key={v} onClick={() => cambiarVelocidad(v)}
-                      className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors
+                      className={`px-2 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer
                         ${velocidad === v ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
                     >
                       {v}x
@@ -263,7 +263,7 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
                     console.log('CLICK FULLSCREEN');
                     toggleFullscreen();
                   }}
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer"
                 >
                   {enPantallaCompleta ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                 </button>
@@ -286,14 +286,14 @@ export default function ReproductorMaterial({ material, onClose }: Props) {
               draggable={false}
             />
             <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm rounded-xl p-2">
-              <button onClick={alejar} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors" title="Alejar">
+              <button onClick={alejar} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer" title="Alejar">
                 <ZoomOut className="w-4 h-4" />
               </button>
               <span className="text-xs text-slate-300 font-mono w-12 text-center">{Math.round(zoom * 100)}%</span>
-              <button onClick={acercar} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors" title="Acercar">
+              <button onClick={acercar} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer" title="Acercar">
                 <ZoomIn className="w-4 h-4" />
               </button>
-              <button onClick={resetZoom} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors" title="Restablecer">
+              <button onClick={resetZoom} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors cursor-pointer" title="Restablecer">
                 <RotateCcw className="w-4 h-4" />
               </button>
             </div>

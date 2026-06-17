@@ -56,10 +56,10 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
     { titulo: 'Sala Virtual',       ruta: `/clases/${clase.id}/aula`,  icono: '💻', color: 'blue',    desc: 'Pizarra interactiva y videollamada' },
     { titulo: 'Estudio',            ruta: `/clases/${clase.id}/estudios`,       icono: '📚', color: 'indigo',  desc: 'Archivos PDF, teoría y recursos' },
     { titulo: 'Ejercicios',         ruta: `/clases/${clase.id}/ejercicios`,     icono: '🧩', color: 'emerald', desc: 'Problemas y tácticas asignadas' },
-    { titulo: 'Partidas',           ruta: `/clases/${clase.id}/jugar`,       icono: '♟️', color: 'amber',   desc: 'Juega en vivo o revisa el historial' },
-    { titulo: 'Datos y ELO',        ruta: `/clases/${clase.id}/estadisticas`,   icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
+    { titulo: 'Jugar',           ruta: `/clases/${clase.id}/jugar`,       icono: '♟️', color: 'amber',   desc: 'Juega en vivo o revisa el historial' },
+    { titulo: 'Estadísticas',        ruta: `/clases/${clase.id}/estadisticas`,   icono: '📊', color: 'purple',  desc: 'Gráficas de rendimiento y evolución' },
     { titulo: 'Objetivos',          ruta: `/clases/${clase.id}/objetivos`,      icono: '🎯', color: 'rose',    desc: 'Metas a superar a corto y largo plazo' },
-    { titulo: 'Rutina',             ruta: `/clases/${clase.id}/rutinas`,        icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
+    { titulo: 'Calendario',             ruta: `/clases/${clase.id}/rutinas`,        icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
     { titulo: 'Material Adicional', ruta: `/clases/${clase.id}/material`,       icono: '📁', color: 'teal',    desc: 'Recursos y archivos complementarios' },
   ];
  
@@ -96,7 +96,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push('/dashboard')}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm text-slate-600"
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-sm text-slate-600 cursor-pointer"
               title="Volver al dashboard"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -51,16 +51,10 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link 
-              href="/register" 
-              className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-xl shadow-lg hover:bg-slate-800 hover:shadow-xl transition-all"
+              href="/registro" 
+              className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-xl shadow-lg hover:bg-slate-800 hover:shadow-xl transition-all cursor-pointer"
             >
-              Crear cuenta como Profesor
-            </Link>
-            <Link 
-              href="/register?rol=alumno" 
-              className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold text-slate-700 bg-white border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all"
-            >
-              Soy Alumno
+              Registrarse
             </Link>
           </div>
         </div>

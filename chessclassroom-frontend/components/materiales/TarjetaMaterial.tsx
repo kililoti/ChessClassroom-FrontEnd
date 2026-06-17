@@ -46,7 +46,7 @@ export default function TarjetaMaterial({ material, esProfesor, onClick, onToggl
     <div className="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300">
 
       {/* Miniatura */}
-      <button onClick={onClick} className="relative block w-full aspect-video bg-slate-100 overflow-hidden">
+      <button onClick={onClick} className="relative block w-full aspect-video bg-slate-100 overflow-hidden cursor-pointer">
         {cargandoMiniatura ? (
           <div className="w-full h-full flex items-center justify-center bg-slate-100 animate-pulse">
             <ImageIcon className="w-8 h-8 text-slate-300" />
@@ -97,8 +97,8 @@ export default function TarjetaMaterial({ material, esProfesor, onClick, onToggl
               className="flex-1 text-sm font-bold px-2 py-1 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
               autoFocus
             />
-            <button onClick={guardarNombre} className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600"><Check className="w-3.5 h-3.5" /></button>
-            <button onClick={() => { setEditando(false); setNombreEditado(material.nombre); }} className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200"><X className="w-3.5 h-3.5" /></button>
+            <button onClick={guardarNombre} className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer"><Check className="w-3.5 h-3.5" /></button>
+            <button onClick={() => { setEditando(false); setNombreEditado(material.nombre); }} className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 cursor-pointer"><X className="w-3.5 h-3.5" /></button>
           </div>
         ) : (
           <h3 className="font-bold text-slate-900 truncate mb-1" title={material.nombre}>
@@ -116,21 +116,21 @@ export default function TarjetaMaterial({ material, esProfesor, onClick, onToggl
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-end gap-1">
             <button
               onClick={() => setEditando(true)}
-              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
               title="Renombrar"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onToggleVisibilidad}
-              className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
               title={material.visible ? 'Ocultar' : 'Mostrar'}
             >
               {material.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={onEliminar}
-              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
               title="Eliminar"
             >
               <Trash2 className="w-3.5 h-3.5" />

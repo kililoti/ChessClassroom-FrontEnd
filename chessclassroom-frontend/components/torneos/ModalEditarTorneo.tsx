@@ -138,7 +138,7 @@ export default function ModalEditarTorneo({ torneoId, claseId, onClose, onEditad
 
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-slate-900">Editar torneo</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         {error && (
@@ -215,7 +215,7 @@ export default function ModalEditarTorneo({ torneoId, claseId, onClose, onEditad
                 </label>
                 {fenPgn.trim() && (
                   <button type="button" onClick={resetearPosicion}
-                    className="text-xs text-red-500 hover:text-red-600 font-semibold">
+                    className="text-xs text-red-500 hover:text-red-600 font-semibold cursor-pointer">
                     Resetear a posición estándar
                   </button>
                 )}
@@ -230,11 +230,11 @@ export default function ModalEditarTorneo({ torneoId, claseId, onClose, onEditad
 
         <div className="flex gap-2 justify-end mt-6">
           <button type="button" onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm transition-colors">
+            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm transition-colors cursor-pointer">
             Cancelar
           </button>
           <button type="button" onClick={guardar} disabled={guardando || loading || !tiempoValido}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2">
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2 cursor-pointer">
             {guardando && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar cambios
           </button>

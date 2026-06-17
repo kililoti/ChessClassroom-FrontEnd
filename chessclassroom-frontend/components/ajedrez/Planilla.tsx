@@ -95,7 +95,7 @@ export default function Planilla({
         <button
           onClick={irAlInicio}
           disabled={indiceVista === 0}
-          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center"
+          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center cursor-pointer"
         >
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 12.5v6H4v-13h2v6l10-6v13zM18 5.5h-2v13h2z"/>
@@ -104,21 +104,21 @@ export default function Planilla({
         <button
           onClick={irAtras}
           disabled={indiceVista === 0}
-          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50"
+          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50 cursor-pointer"
         >
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M16 5.5l-10 6.5 10 6.5z"/></svg>
         </button>
         <button
           onClick={irAdelante}
           disabled={estamosEnElPresente}
-          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50"
+          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50 cursor-pointer"
         >
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M8 18.5l10-6.5-10-6.5z"/></svg>
         </button>
         <button
           onClick={irAlFinal}
           disabled={estamosEnElPresente}
-          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50"
+          className="flex-1 py-3 hover:bg-[#302e2c] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all flex justify-center border-l border-[#302e2c]/50 cursor-pointer"
         >
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
             <path d="M18 11.5v-6h2v13h-2v-6l-10 6v-13zM6 5.5h2v13H6z"/>

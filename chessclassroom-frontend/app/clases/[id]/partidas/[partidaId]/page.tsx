@@ -330,7 +330,7 @@ export default function PartidaPage() {
             {esProfesor && finalizada && partida.pgn_final && partida.estado !== 'abortada' && (
               <button
                 onClick={() => setModalGuardar(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
               >
                 <BookMarked className="w-4 h-4" /> Guardar en estudio
               </button>
@@ -353,7 +353,7 @@ export default function PartidaPage() {
                     setTimeout(() => emitirPresenteRef.current?.(), 2500);
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
               >
                 <Swords className="w-4 h-4" /> Unirse a la partida
               </button>

@@ -65,14 +65,14 @@ export default function TablonObjetivosCard({
                 <>
                 <button
                     onClick={(e) => { e.stopPropagation(); setMostrarModalEditar(true); }}
-                    className="text-slate-300 hover:text-blue-400 transition-colors"
+                    className="text-slate-300 hover:text-blue-400 transition-colors cursor-pointer"
                     title="Editar tablón"
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
                 <button
                     onClick={(e) => { e.stopPropagation(); onEliminarTablon(tablon.id); }}
-                    className="text-slate-300 hover:text-red-400 transition-colors"
+                    className="text-slate-300 hover:text-red-400 transition-colors cursor-pointer"
                     title="Eliminar tablón"
                 >
                     <Trash2 className="w-4 h-4" />
@@ -121,7 +121,7 @@ export default function TablonObjetivosCard({
                 ) : (
                     <button
                     onClick={() => setMostrarForm(true)}
-                    className="flex items-center gap-1.5 text-sm text-rose-500 hover:text-rose-700 mt-1 transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-rose-500 hover:text-rose-700 mt-1 transition-colors cursor-pointer"
                     >
                     <Plus className="w-4 h-4" />
                     {esVistaGrupal ? 'Añadir objetivo a todos' : 'Añadir objetivo'}

@@ -55,9 +55,9 @@ function ModalCrearCarpeta({ claseId, carpetaPadreId, modulo, onClose, onCreada 
           placeholder="Nombre de la carpeta"
         />
         <div className="flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors">Cancelar</button>
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm transition-colors cursor-pointer">Cancelar</button>
           <button onClick={handleCrear} disabled={!nombre.trim() || loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2">
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />} Crear
           </button>
         </div>
@@ -424,20 +424,20 @@ export default function ExploradorArchivos({
 
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-            <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0">
+            <button onClick={volverAtras} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-slate-600 shrink-0 cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                 {icono} {titulo}
               </h1>
-              <nav className="flex items-center gap-1 mt-1 text-sm text-slate-500 font-medium flex-wrap">
-                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors">Raíz</button>
+              <nav className="flex items-center gap-1 mt-1 text-sm text-slate-500 font-medium flex-wrap cursor-pointer">
+                <button onClick={() => router.push(basePath)} className="hover:text-blue-600 transition-colors cursor-pointer">Raíz</button>
                 {breadcrumbs.map((bc, i) => (
                   <React.Fragment key={bc.id}>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     <button onClick={() => router.push(`${basePath}/${bc.id}`)}
-                      className={`hover:text-blue-600 transition-colors ${!archivoId && i === breadcrumbs.length - 1 ? 'text-slate-800 font-semibold' : ''}`}>
+                      className={`hover:text-blue-600 cursor-pointer transition-colors ${!archivoId && i === breadcrumbs.length - 1 ? 'text-slate-800 font-semibold' : ''}`}>
                       {bc.nombre}
                     </button>
                   </React.Fragment>
@@ -457,12 +457,12 @@ export default function ExploradorArchivos({
           {esProfesor && (
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {!archivoId && (
-                <button onClick={() => setModalCarpeta(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold text-sm shadow-sm">
+                <button onClick={() => setModalCarpeta(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-semibold text-sm shadow-sm cursor-pointer">
                   <Plus className="w-4 h-4" />{estamosEnRaiz ? 'Nueva carpeta' : 'Subcarpeta'}
                 </button>
               )}
               {carpetaId && !archivoId && (
-                <button onClick={() => setModalPgn(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm">
+                <button onClick={() => setModalPgn(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm cursor-pointer">
                   <Upload className="w-4 h-4" /> {modulo === 'ejercicio' ? 'Subir ejercicio' : 'Subir PGN'}
                 </button>
               )}
@@ -742,7 +742,7 @@ export default function ExploradorArchivos({
                           </h2>
                           {esProfesor && partidas.length > 0 && (
                             <button onClick={seleccionarTodos}
-                              className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5">
+                              className="text-xs text-slate-400 hover:text-blue-600 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
                               <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${todosSeleccionados ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
                                 {todosSeleccionados && (
                                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -768,11 +768,11 @@ export default function ExploradorArchivos({
                                 </button>
                               )}
                               <button onClick={eliminarSeleccionados}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors">
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
                                 <Trash2 className="w-4 h-4" /> Eliminar
                               </button>
                               <button onClick={() => setSelectedIds(new Set())}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors">
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition-colors cursor-pointer">
                                 <X className="w-4 h-4" /> Cancelar
                               </button>
                             </div>

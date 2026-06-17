@@ -150,7 +150,7 @@ export default function ChatIA() {
                 placeholder="Escribe tu pregunta..."
                 rows={1}
                 disabled={cargando}
-                className="flex-1 resize-none text-sm px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 max-h-24 overflow-y-auto disabled:opacity-50"
+                className="flex-1 resize-none text-black text-sm px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 max-h-24 overflow-y-auto disabled:opacity-50"
                 style={{ minHeight: '38px' }}
               />
               <button
@@ -171,7 +171,7 @@ export default function ChatIA() {
       {/* Botón flotante */}
       <button
         onClick={() => setAbierto(!abierto)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer
           ${abierto ? 'bg-slate-700 hover:bg-slate-800' : 'bg-blue-500 hover:bg-blue-600'}
         `}
       >

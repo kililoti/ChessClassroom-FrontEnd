@@ -179,7 +179,7 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
 
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-slate-900">Nueva partida</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         {error && (
@@ -196,7 +196,7 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
               <div>
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">♔ Blancas</label>
                 <select
-                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
                   value={jugadorBlancasId}
                   onChange={e => setJugadorBlancasId(e.target.value)}
                 >
@@ -209,7 +209,7 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
               <div>
                 <label className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5 block">♚ Negras</label>
                 <select
-                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
                   value={jugadorNegrasId}
                   onChange={e => setJugadorNegrasId(e.target.value)}
                 >
@@ -248,7 +248,7 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
                       key={value}
                       type="button"
                       onClick={() => setColorPropio(value)}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer ${
                         colorPropio === value
                           ? 'border-blue-600 bg-blue-50 text-blue-700'
                           : 'border-slate-200 text-slate-600 hover:border-slate-300'
@@ -316,14 +316,14 @@ export default function ModalCrearPartida({ claseId, esProfesor, onClose, onCrea
         </div>
 
         <div className="flex gap-2 justify-end mt-6">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm transition-colors">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm transition-colors cursor-pointer">
             Cancelar
           </button>
           <button
             type="button"
             onClick={crear}
             disabled={loading || !tiempoValido}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm transition-colors disabled:opacity-40 flex items-center gap-2 cursor-pointer"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             Crear partida

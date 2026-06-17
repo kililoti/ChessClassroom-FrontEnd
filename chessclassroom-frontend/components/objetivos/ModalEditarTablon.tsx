@@ -21,7 +21,7 @@ export default function ModalEditarTablon({ tablon, onGuardar, onCerrar }: Props
 
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-slate-800">Editar tablón</h2>
-          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -33,7 +33,7 @@ export default function ModalEditarTablon({ tablon, onGuardar, onCerrar }: Props
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+              className="w-full text-sm px-3 py-2 rounded-lg border text-black border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
             />
           </div>
 
@@ -43,7 +43,7 @@ export default function ModalEditarTablon({ tablon, onGuardar, onCerrar }: Props
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={3}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
+              className="w-full text-sm text-black px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
             />
           </div>
 
@@ -53,7 +53,7 @@ export default function ModalEditarTablon({ tablon, onGuardar, onCerrar }: Props
               type="date"
               value={fechaLimite}
               onChange={(e) => setFechaLimite(e.target.value)}
-              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-600"
+              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-600 cursor-pointer"
             />
           </div>
         </div>
@@ -61,14 +61,14 @@ export default function ModalEditarTablon({ tablon, onGuardar, onCerrar }: Props
         <div className="flex gap-3 justify-end mt-6">
           <button
             onClick={onCerrar}
-            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
+            className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={() => onGuardar(titulo, descripcion, fechaLimite)}
             disabled={!titulo.trim()}
-            className="px-4 py-2 text-sm bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Guardar cambios
           </button>

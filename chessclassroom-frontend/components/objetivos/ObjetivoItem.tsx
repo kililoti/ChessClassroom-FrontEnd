@@ -70,7 +70,7 @@ export default function ObjetivoItem({ objetivo, esProfesor, onToggle, onElimina
       {esProfesor && (
         <button
           onClick={() => onEliminar(objetivo.id)}
-          className="text-slate-300 hover:text-red-400 transition-colors"
+          className="text-slate-300 hover:text-red-400 transition-colors cursor-pointer"
         >
           <Trash2 className="w-4 h-4" />
         </button>

@@ -135,21 +135,21 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
 
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-slate-800">Añadir material</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
 
         {/* Tabs modo */}
         <div className="flex gap-2 mb-5">
           <button
             onClick={() => { setModo('archivo'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border transition-colors
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border transition-colors cursor-pointer
               ${modo === 'archivo' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
           >
             <Upload className="w-4 h-4" /> Subir foto/vídeo
           </button>
           <button
             onClick={() => { setModo('youtube'); setError(''); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border transition-colors
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border transition-colors cursor-pointer
               ${modo === 'youtube' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
           >
             <Play className="w-4 h-4" /> Vídeo de YouTube
@@ -194,7 +194,7 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
               />
               <button
                 onClick={() => inputArchivoRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-8 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-8 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-colors cursor-pointer"
               >
                 {archivo ? (
                   <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -247,7 +247,7 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
             />
             <button
               onClick={() => inputMiniaturaRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-colors cursor-pointer"
             >
               {miniatura ? (
                 <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -268,13 +268,13 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
         </div>
 
         <div className="flex gap-3 justify-end mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
             Cancelar
           </button>
           <button
             onClick={handleSubir}
             disabled={subiendo}
-            className="px-4 py-2 text-sm bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {subiendo && <Loader2 className="w-4 h-4 animate-spin" />}
             {subiendo ? 'Subiendo...' : 'Añadir material'}

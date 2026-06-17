@@ -91,7 +91,7 @@ export default function PartidasPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push(`/clases/${claseId}`)}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600"
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600 cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6"/>
@@ -109,7 +109,7 @@ export default function PartidasPage() {
           </div>
           <button
             onClick={() => setModalCrear(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Nueva partida
           </button>
@@ -123,7 +123,7 @@ export default function PartidasPage() {
             <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit shadow-sm">
               <button
                 onClick={() => { setTab('activas'); setFiltroUsuarioId('todos'); }} // Resetea filtro al volver
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                   tab === 'activas' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -131,7 +131,7 @@ export default function PartidasPage() {
               </button>
               <button
                 onClick={() => setTab('historial')}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                   tab === 'historial' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >

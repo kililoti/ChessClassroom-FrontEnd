@@ -79,7 +79,7 @@ export default function ChecklistRutinas({
         <div className="flex items-center justify-between">
           <button
             onClick={onSemanaAnterior}
-            className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500"
+            className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 cursor-pointer"
             title="Semana anterior"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -92,7 +92,7 @@ export default function ChecklistRutinas({
             {!esSemanaActualHoy && (
               <button
                 onClick={onVolverHoy}
-                className="flex items-center gap-0.5 text-[10px] text-blue-500 hover:text-blue-700 transition-colors"
+                className="flex items-center gap-0.5 text-[10px] text-blue-500 hover:text-blue-700 transition-colors cursor-pointer"
                 title="Volver a la semana actual"
               >
                 <RotateCcw className="w-2.5 h-2.5" /> Hoy
@@ -102,7 +102,7 @@ export default function ChecklistRutinas({
 
           <button
             onClick={onSemanaSiguiente}
-            className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500"
+            className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 cursor-pointer"
             title="Semana siguiente"
           >
             <ChevronRight className="w-4 h-4" />
@@ -131,7 +131,7 @@ export default function ChecklistRutinas({
                 onClick={() => esProfesor && rutina.semana && onToggle(rutina.semana.id)}
                 disabled={!esProfesor || !rutina.semana}
                 title={!esProfesor ? 'Solo el profesor puede marcar rutinas' : ''}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all
+                className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all cursor-pointer
                   ${estado === 'completado' ? 'border-green-400 bg-green-100' : ''}
                   ${estado === 'expirado' ? 'border-red-400 bg-red-100' : ''}
                   ${estado === 'pendiente' ? 'border-slate-300 bg-white' : ''}
@@ -153,7 +153,7 @@ export default function ChecklistRutinas({
               {esProfesor && (
                 <button
                   onClick={() => onEliminar(rutina.id)}
-                  className="text-slate-300 hover:text-red-400 transition-colors"
+                  className="text-slate-300 hover:text-red-400 transition-colors cursor-pointer"
                   title="Eliminar rutina"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -178,14 +178,14 @@ export default function ChecklistRutinas({
             <div className="flex gap-1 justify-end">
               <button
                 onClick={() => { setMostrarForm(false); setNuevoTitulo(''); }}
-                className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 rounded hover:bg-slate-100"
+                className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 rounded hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCrear}
                 disabled={!nuevoTitulo.trim()}
-                className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
               >
                 Añadir
               </button>
@@ -199,7 +199,7 @@ export default function ChecklistRutinas({
         <div className="px-4 py-3 border-t border-slate-100">
           <button
             onClick={() => setMostrarForm(true)}
-            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition-colors cursor-pointer"
           >
             <Plus className="w-3 h-3" /> Añadir rutina
           </button>

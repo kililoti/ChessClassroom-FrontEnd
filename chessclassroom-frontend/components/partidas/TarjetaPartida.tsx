@@ -138,7 +138,7 @@ export default function TarjetaPartida({ partida, usuarioId, esProfesor, onEntra
               <button
                 onClick={eliminar}
                 disabled={eliminando}
-                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 title="Eliminar"
               >
                 {eliminando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

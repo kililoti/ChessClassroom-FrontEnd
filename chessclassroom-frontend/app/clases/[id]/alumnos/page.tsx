@@ -108,7 +108,7 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600"
+            className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600 cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6"/>
@@ -132,7 +132,7 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
             placeholder="Buscar por nombre o alias..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
+            className="w-full pl-9 pr-4 py-2.5 text-sm text-black bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
           />
         </div>
  
@@ -179,20 +179,20 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
                             if (e.key === 'Escape') cancelarEdicion();
                           }}
                           placeholder="Nombre en la clase..."
-                          className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                          className="flex-1 text-sm text-black px-3 py-1.5 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                           autoFocus
                         />
                         <button
                           onClick={() => guardarAlias(alumno.alumno_id)}
                           disabled={guardando}
-                          className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                          className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 cursor-pointer"
                           title="Guardar"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={cancelarEdicion}
-                          className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors"
+                          className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer"
                           title="Cancelar"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -221,13 +221,13 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
                           <span className="text-xs text-red-600 font-medium">¿Expulsar?</span>
                           <button
                             onClick={() => expulsarAlumno(alumno.alumno_id)}
-                            className="px-2.5 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                            className="px-2.5 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium cursor-pointer"
                           >
                             Sí
                           </button>
                           <button
                             onClick={() => setConfirmandoExpulsar(null)}
-                            className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                            className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer"
                           >
                             No
                           </button>
@@ -236,14 +236,14 @@ export default function AlumnosPage({ params }: { params: Promise<{ id: string }
                         <>
                           <button
                             onClick={() => iniciarEdicion(alumno)}
-                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                             title="Editar nombre en la clase"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => { setConfirmandoExpulsar(alumno.alumno_id); setEditandoId(null); }}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             title="Expulsar de la clase"
                           >
                             <UserX className="w-4 h-4" />

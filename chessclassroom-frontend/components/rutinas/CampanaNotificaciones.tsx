@@ -70,7 +70,7 @@ export default function CampanaNotificaciones({ usuarioId, token }: Props) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setAbierto(!abierto)}
-        className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+        className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
       >
         <Bell className="w-5 h-5 text-slate-600" />
         {noLeidas > 0 && (
@@ -86,7 +86,7 @@ export default function CampanaNotificaciones({ usuarioId, token }: Props) {
             <h3 className="font-bold text-slate-800 text-sm">Notificaciones</h3>
             {noLeidas > 0 && (
               <button onClick={marcarTodasLeidas}
-                className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1">
+                className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 cursor-pointer">
                 <Check className="w-3 h-3" /> Marcar todas
               </button>
             )}
@@ -116,7 +116,7 @@ export default function CampanaNotificaciones({ usuarioId, token }: Props) {
                   </div>
                   {!n.leida && (
                     <button onClick={() => marcarLeida(n.id)}
-                      className="text-slate-300 hover:text-slate-500 flex-shrink-0">
+                      className="text-slate-300 hover:text-slate-500 flex-shrink-0 cursor-pointer">
                       <X className="w-3 h-3" />
                     </button>
                   )}

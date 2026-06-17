@@ -93,7 +93,7 @@ export default function ModalFechaEntrega({
             <CalendarClock className="w-5 h-5 text-blue-600" />
             {esModoGrupo ? 'Asignar fechas' : 'Configurar fechas'}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -156,21 +156,21 @@ export default function ModalFechaEntrega({
           <button
             onClick={() => { setFechaInicio(''); setFechaEntrega(''); }}
             disabled={!fechaInicio && !fechaEntrega}
-            className="px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-xl text-sm font-medium transition-colors disabled:opacity-40"
+            className="px-3 py-2 text-slate-500 hover:bg-slate-100 rounded-xl text-sm font-medium transition-colors disabled:opacity-40 cursor-pointer"
           >
             Limpiar
           </button>
           <div className="flex-1" />
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm"
+            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium text-sm cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={guardar}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm disabled:opacity-40 flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-sm disabled:opacity-40 flex items-center gap-2 transition-colors cursor-pointer"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             Guardar

@@ -243,7 +243,7 @@ export default function ModalCargarPartida({ claseId, onClose, onCargar }: Props
                       <FileText className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-semibold text-blue-600">{archivo.name}</span>
                     </div>
-                    <button onClick={e => { e.stopPropagation(); setArchivo(null); }} className="text-slate-400 hover:text-red-500">
+                    <button onClick={e => { e.stopPropagation(); setArchivo(null); }} className="text-slate-400 hover:text-red-500 cursor-pointer">
                       <X className="w-4 h-4" />
                     </button>
                   </div>

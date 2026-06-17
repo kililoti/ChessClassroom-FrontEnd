@@ -114,7 +114,7 @@ function RegisterForm() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de cuenta</label>
           <select
             name="rol" value={formData.rol} onChange={handleChange}
-            className="w-full px-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+            className="w-full px-4 py-2 text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white cursor-'pointer"
           >
             <option value="alumno">Soy Alumno</option>
             <option value="profesor">Soy Profesor</option>
@@ -123,7 +123,7 @@ function RegisterForm() {
 
         <button
           type="submit" disabled={status.loading}
-          className={`w-full py-2 px-4 text-white font-semibold rounded-lg shadow-md transition-colors
+          className={`w-full py-2 px-4 text-white font-semibold rounded-lg shadow-md transition-colors cursor-pointer
             ${status.loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
         >
           {status.loading ? 'Registrando...' : 'Registrarse'}
