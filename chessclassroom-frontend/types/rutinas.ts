@@ -14,6 +14,7 @@ export interface EventoCalendario {
   origen_grupal: boolean;
   creado_en: string;
   clase_nombre?: string;
+  descripcion?: string;
 }
 
 export interface RutinaChecklist {

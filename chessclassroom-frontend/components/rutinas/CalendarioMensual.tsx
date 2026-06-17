@@ -75,7 +75,6 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
   );
   while (celdas.length % 7 !== 0) celdas.push(null);
  
-  // Filas de 7 celdas
   const filas: (number | null)[][] = [];
   for (let i = 0; i < celdas.length; i += 7) filas.push(celdas.slice(i, i + 7));
  
@@ -111,6 +110,9 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
     if (mes === 11) { setMes(0); setAnio(a => a + 1); }
     else setMes(m => m + 1);
   };
+
+  const esEventoSoloLectura = (id: string) =>
+    id.startsWith('torneo-') || id.startsWith('entrega-');
  
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -134,7 +136,7 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
         ))}
       </div>
  
-      {/* Filas — tick y celdas en el mismo flex para compartir altura real */}
+      {/* Filas */}
       <div>
         {filas.map((fila, filaIdx) => {
           const primerDiaReal = fila.find(c => c !== null) ?? 1;
@@ -142,8 +144,6 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
  
           return (
             <div key={filaIdx} className="flex border-b border-slate-100 last:border-b-0">
- 
-              {/* Tick — ocupa la misma altura que la fila porque está en el mismo flex */}
               <div className="w-6 flex-shrink-0 border-r border-slate-100 flex items-center justify-center">
                 {estado === 'completado' && (
                   <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center" title="Rutinas completadas">
@@ -157,7 +157,6 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                 )}
               </div>
  
-              {/* Celdas de días */}
               {fila.map((dia, diaIdx) => {
                 const esHoy = dia === hoyDia && mes === hoyMes && anio === hoyAnio;
                 const eventosDelDia = dia ? getEventosDia(dia) : [];
@@ -232,6 +231,9 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                 <button key={e.id} onClick={() => { setEventoSeleccionado(e); setMostrarEventosDia(null); }}
                   className={`w-full text-left text-sm font-medium px-3 py-2 rounded-xl border cursor-pointer ${colorTipo[e.tipo]}`}>
                   <span className="capitalize font-semibold">{e.tipo}</span> — {e.titulo}
+                  {e.descripcion && (
+                    <span className="block text-xs opacity-70 mt-0.5">{e.descripcion}</span>
+                  )}
                   {e.tipo !== 'deberes' && (
                     <span className="block text-xs opacity-70 mt-0.5">
                       {formatHora(e.fecha_inicio)}{e.fecha_fin ? ` — ${formatHora(e.fecha_fin)}` : ''}
@@ -251,11 +253,14 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
             <div className="flex items-start justify-between mb-3">
               <div>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize
-                  ${eventoSeleccionado.tipo === 'clase' ? 'bg-blue-100 text-blue-700' : ''}
-                  ${eventoSeleccionado.tipo === 'torneo' ? 'bg-purple-100 text-purple-700' : ''}
-                  ${eventoSeleccionado.tipo === 'deberes' ? 'bg-amber-100 text-amber-700' : ''}
+                  ${eventoSeleccionado.tipo === 'clase'   ? 'bg-blue-100 text-blue-700'   : ''}
+                  ${eventoSeleccionado.tipo === 'torneo'  ? 'bg-purple-100 text-purple-700' : ''}
+                  ${eventoSeleccionado.tipo === 'deberes' ? 'bg-amber-100 text-amber-700'  : ''}
                 `}>{eventoSeleccionado.tipo}</span>
                 <h3 className="font-bold text-slate-800 mt-1">{eventoSeleccionado.titulo}</h3>
+                {eventoSeleccionado.descripcion && (
+                  <p className="text-xs text-slate-500 mt-0.5">{eventoSeleccionado.descripcion}</p>
+                )}
               </div>
               <button onClick={() => setEventoSeleccionado(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
@@ -270,7 +275,7 @@ export default function CalendarioMensual({ eventos, rutinas, esProfesor, esVist
                 📅 Entrega: {parsearFechaLocal(eventoSeleccionado.deadline).toLocaleDateString('es-ES')}
               </p>
             )}
-            {esProfesor && (
+            {esProfesor && !esEventoSoloLectura(eventoSeleccionado.id) && (
               <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3">
                 <button onClick={() => { onEliminar(eventoSeleccionado.id, true, esVistaGrupal); setEventoSeleccionado(null); }}
                   className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 transition-colors cursor-pointer">
