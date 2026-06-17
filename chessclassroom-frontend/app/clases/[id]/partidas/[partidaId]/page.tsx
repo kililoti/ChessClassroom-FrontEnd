@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Swords, BookMarked, Handshake, PlayCircle } from 'lucide-react';
+import { Swords, BookMarked, Handshake } from 'lucide-react';
 import VistaPartida from '@/components/partidas/VistaPartida';
 import ChatContainer from '@/components/chat/ChatContainer';
 import ModalGuardarPartidaEstudio from '@/components/partidas/ModalGuardarPartidaEstudio';
 import { useTorneoActivo } from '@/contexts/TorneoActivoContext';
 
-const API = `${process.env.NEXT_PUBLIC_API_URL}`;
+const API = 'http://localhost:3001/api';
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -124,7 +124,7 @@ export default function PartidaPage() {
     cargarSalaChat();
   }, [cargarPartida, cargarSalaChat]);
 
-  // Cargar el chat del torneo si no vino como query param
+  // Cargar el chat del torneo si no vino como query param (e.g. al llegar desde el widget)
   useEffect(() => {
     if (salaChatTorneoFromParams || !partida?.torneo_id) return;
     fetch(`${API}/torneos/${partida.torneo_id}/chat`, {
@@ -136,6 +136,7 @@ export default function PartidaPage() {
   }, [partida?.torneo_id, salaChatTorneoFromParams]);
 
   // Mantener torneoActivoId para que el widget reciba eventos de emparejamiento
+  // pingActivo controla si se envían heartbeats (solo mientras la partida está en curso)
   const { setTorneoActivoId, setPingActivo } = useTorneoActivo();
   useEffect(() => {
     if (!partida?.torneo_id) return;
@@ -160,6 +161,8 @@ export default function PartidaPage() {
     setPartida(prev => prev ? { ...prev, estado: nuevoEstado } : prev);
     if (nuevoEstado === 'finalizada' || nuevoEstado === 'abortada') {
       setFinalizada(true);
+      // Para abort no recargamos: el job tarda hasta 5s en procesarlo y sobreescribiría
+      // el estado local con 'iniciada'. El banner ya muestra el resultado correcto.
       if (nuevoEstado === 'finalizada') {
         cargarPartida();
       }
@@ -221,16 +224,17 @@ export default function PartidaPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={infoTablas.rechazarTablas} className="flex-1 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition-colors shadow-sm">
+            <button onClick={infoTablas.rechazarTablas} className="flex-1 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition-colors shadow-sm cursor-pointer">
               Rechazar
             </button>
-            <button onClick={infoTablas.aceptarTablas} className="flex-1 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm">
+            <button onClick={infoTablas.aceptarTablas} className="flex-1 py-2 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-sm cursor-pointer">
               Aceptar
             </button>
           </div>
         </div>
       )}
 
+      {/* CORREGIDO: Se añade !finalizada para que el cartel desaparezca cuando el rival acepta */}
       {infoTablas.ofrecioTablas === usuario?.id && !infoTablas.tablasRechazadas && !finalizada && (
         <div className="bg-slate-800 rounded-2xl p-4 shadow-md animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
@@ -280,6 +284,7 @@ export default function PartidaPage() {
       onJugadorUnido={cargarPartida}
       emitirPresenteRef={emitirPresenteRef}
       onVolver={esTorneo ? () => router.push(rutaVolver) : undefined}
+      mostrarStockfish={finalizada && partida.estado !== 'abortada'}
       onTablasChange={setInfoTablas}
     />
   );
@@ -301,7 +306,7 @@ export default function PartidaPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.push(rutaVolver)}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600"
+              className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-slate-600 cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 18-6-6 6-6"/>
@@ -359,21 +364,17 @@ export default function PartidaPage() {
               </button>
             )}
 
-            {partida.estado === 'iniciada' ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full shadow-sm bg-blue-50 text-blue-700 border border-blue-200">
-                <PlayCircle className="w-4 h-4" /> Activa
-              </span>
-            ) : (
-              <span className={`px-3 py-1.5 text-sm font-semibold rounded-full shadow-sm ${
-                partida.estado === 'esperando'  ? 'bg-blue-100 text-blue-700' :
-                partida.estado === 'finalizada' ? 'bg-slate-100 text-slate-600' :
-                'bg-red-100 text-red-600'
-              }`}>
-                {partida.estado === 'esperando'  ? '⏳ En espera' :
-                 partida.estado === 'finalizada' ? '🏁 Finalizada' :
-                 '🚫 Abortada'}
-              </span>
-            )}
+            <span className={`px-3 py-1.5 text-sm font-semibold rounded-full shadow-sm ${
+              partida.estado === 'iniciada'   ? 'bg-emerald-100 text-emerald-700' :
+              partida.estado === 'esperando'  ? 'bg-blue-100 text-blue-700' :
+              partida.estado === 'finalizada' ? 'bg-slate-100 text-slate-600' :
+              'bg-red-100 text-red-600'
+            }`}>
+              {partida.estado === 'iniciada'   ? '🟢 En curso' :
+               partida.estado === 'esperando'  ? '⏳ En espera' :
+               partida.estado === 'finalizada' ? '🏁 Finalizada' :
+               '🚫 Abortada'}
+            </span>
           </div>
         </div>
       </div>
@@ -381,28 +382,27 @@ export default function PartidaPage() {
       {/* Layout Principal */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {esTorneo ? (
-          /* Partida de torneo */
+          /* Partida de torneo: chat del torneo a la izquierda, tablero a la derecha */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* Columna Izquierda: Chat del torneo + Notificaciones de tablas (CORREGIDO) */}
-            <div className="lg:col-span-3 sticky top-6 flex flex-col gap-4">
+            {/* Chat del torneo */}
+            <div className="lg:col-span-3 sticky top-6">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col">
                 <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2 rounded-t-2xl shrink-0">
                   <span className="text-xl">💬</span>
                   <h2 className="font-bold text-slate-800">Chat del torneo</h2>
                 </div>
-                {salaChatTorneo ? (
-                  <ChatContainer salaId={salaChatTorneo} />
-                ) : (
-                  <div className="p-4 text-slate-400 text-sm text-center">Cargando chat...</div>
-                )}
+                {salaChatTorneo
+                  ? <ChatContainer salaId={salaChatTorneo} />
+                  : <div className="p-4 text-slate-400 text-sm text-center">Cargando chat...</div>
+                }
               </div>
-              {widgetTablas}
             </div>
 
-            {/* Columna Derecha: Tablero */}
-            <div className="lg:col-span-9">
+            {/* Tablero + notificaciones de tablas */}
+            <div className="lg:col-span-9 flex flex-col gap-4">
               {vistaPartida}
+              {widgetTablas}
             </div>
 
           </div>
@@ -410,7 +410,7 @@ export default function PartidaPage() {
           /* Partida normal: chat a la izquierda, tablero y notificaciones a la derecha */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            {/* Columna Izquierda: Chat + Notificaciones de tablas */}
+            {/* Columna Izquierda: Chat */}
             <div className="lg:col-span-3 sticky top-6 flex flex-col gap-4">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col mb-4">
                 <div className="bg-slate-50/80 border-b border-slate-100 p-4 flex items-center gap-2 shrink-0">

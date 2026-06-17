@@ -1,27 +1,34 @@
 'use client';
- 
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatContainer from '../../../components/chat/ChatContainer';
 import Link from 'next/link';
- 
+
 interface DatosClase {
   id: string;
   nombre: string;
   tipo: 'grupal' | 'particular';
   salaIdPrincipal: string;
 }
- 
+
 export default function VistaClasePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
   const [clase, setClase] = useState<DatosClase | null>(null);
- 
+  const [esProfesor, setEsProfesor] = useState(false);
+
   useEffect(() => {
     const cargarDatosClase = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/login'); return; }
+
+        const usuarioStr = localStorage.getItem('usuario');
+        if (usuarioStr) {
+          const usuario = JSON.parse(usuarioStr);
+          setEsProfesor(usuario.rol === 'profesor');
+        }
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${id}`, {
           method: 'GET',
@@ -43,7 +50,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
     };
     cargarDatosClase();
   }, [id, router]);
- 
+
   if (!clase) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -72,7 +79,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
     { titulo: 'Calendario',         ruta: `/clases/${clase.id}/rutinas`,        icono: '📅', color: 'cyan',    desc: 'Calendario de entrenamiento semanal' },
     { titulo: 'Material Adicional', ruta: `/clases/${clase.id}/material`,       icono: '📁', color: 'teal',    desc: 'Recursos y archivos complementarios' },
   ];
- 
+
   const colorClases: Record<string, string> = {
     blue:   'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
     indigo: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
@@ -84,7 +91,7 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
     teal:   'bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white',
     slate:  'bg-slate-100 text-slate-600 group-hover:bg-slate-600 group-hover:text-white',
   };
- 
+
   const colorTexto: Record<string, string> = {
     blue:   'group-hover:text-blue-600',
     indigo: 'group-hover:text-indigo-600',
@@ -164,8 +171,8 @@ export default function VistaClasePage({ params }: { params: Promise<{ id: strin
                 </Link>
               ))}
 
-              {/* Gestión de alumnos — solo clases grupales, ancho completo */}
-              {clase.tipo === 'grupal' && (
+              {/* Gestión de alumnos — solo en clases grupales y solo para el profesor */}
+              {clase.tipo === 'grupal' && esProfesor && (
                 <Link
                   href={`/clases/${clase.id}/alumnos`}
                   className="group sm:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 flex items-start gap-4 cursor-pointer"

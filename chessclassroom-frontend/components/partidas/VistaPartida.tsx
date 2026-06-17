@@ -5,11 +5,14 @@ import { Flag, Handshake, RotateCcw, Trophy, X } from 'lucide-react';
 import { useChessGame, MoveResult } from '@/hooks/useChessGame';
 import { usePartidaRealtime, EventoPartida } from '@/hooks/usePartidaRealtime';
 import { usePartidaTimer, formatTiempoReloj } from '@/hooks/usePartidaTimer';
+import { useStockfish } from '@/hooks/useStockfish';
 import ChessboardCore from '@/components/ajedrez/core/ChessboardCore';
 import PromotionModal from '@/components/ajedrez/ui/PromotionModal';
 import Planilla from '@/components/ajedrez/Planilla';
+import PanelStockfish from '@/components/ajedrez/PanelStockfish';
+import EvalBarVertical from '@/components/ajedrez/EvalBarVertical';
 
-const API = `${process.env.NEXT_PUBLIC_API_URL}`;
+const API = 'http://localhost:3001/api';
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
@@ -48,6 +51,7 @@ export interface VistaPartidaProps {
   onJugadorUnido?: () => void;
   emitirPresenteRef?: React.MutableRefObject<(() => void) | null>;
   onVolver?: () => void;
+  mostrarStockfish?: boolean;
   onTablasChange?: (info: {
     ofrecioTablas: string | null;
     tablasRechazadas: boolean;
@@ -79,6 +83,7 @@ export default function VistaPartida({
   onJugadorUnido,
   emitirPresenteRef,
   onVolver,
+  mostrarStockfish = false,
   onTablasChange,
 }: VistaPartidaProps) {
   const [orientacion, setOrientacion]           = useState<'white' | 'black'>('white');
@@ -122,6 +127,21 @@ export default function VistaPartida({
     handlePromotionSelect, handlePromotionCancel,
     cargarPgn,
   } = useChessGame({ pgnInicial });
+
+  const stockfish    = useStockfish();
+  const turnoBlancas = fenVisible.split(' ')[1] === 'w';
+  const numeroJugada = parseInt(fenVisible.split(' ')[5], 10) || 1;
+  const flechasTablero = mostrarStockfish && stockfish.activo ? stockfish.flechas : [];
+
+  useEffect(() => {
+    if (mostrarStockfish && stockfish.activo) {
+      stockfish.analizarFen(fenVisible);
+    }
+  }, [fenVisible, stockfish.activo, mostrarStockfish]);
+
+  useEffect(() => {
+    return () => { stockfish.desactivar(); };
+  }, []);
 
   const timerDetenerRef    = useRef<() => void>(() => {});
   const timerSincronizarRef = useRef<(b: number, n: number, t: 'w'|'b') => void>(() => {});
@@ -280,7 +300,6 @@ export default function VistaPartida({
       }
       iniciarCuentaAtras(timestampUltimoMovimiento ?? undefined, procesarAbortoInmediato);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -301,7 +320,7 @@ export default function VistaPartida({
     }
 
     timerSincronizarRef.current(tiempoB, tiempoN, turnoInicial);
-  }, [historialMovimientos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [historialMovimientos.length]);
 
   const handleEvento = useCallback((evento: EventoPartida) => {
     switch (evento.tipo) {
@@ -437,7 +456,7 @@ export default function VistaPartida({
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [presentes, estado, soyJugador, soyBlancas, jugadorBlancas, jugadorNegras, partidaId, onEstadoCambiado]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [presentes, estado, soyJugador, soyBlancas, jugadorBlancas, jugadorNegras, partidaId, onEstadoCambiado]);
 
   useEffect(() => {
     if (estado !== 'esperando') return;
@@ -656,7 +675,7 @@ export default function VistaPartida({
     if (estado === 'abortada') return {
       icono: '🚫',
       titulo: 'Partida abortada',
-      subtitulo: 'Algún jugador no realizó el primer movimiento en 30 segundos.',
+      subtitulo: 'Ningún jugador realizó el primer movimiento en 30 segundos.',
       color: 'bg-slate-100',
     };
     const motivoLabel: Record<string, string> = {
@@ -726,7 +745,7 @@ export default function VistaPartida({
     : { jugador: jugadorBlancas, color: 'w' as const, tiempoMs: timer.tiempoBlancasMs };
   const jugadorAbajo = orientacion === 'white'
     ? { jugador: jugadorBlancas, color: 'w' as const, tiempoMs: timer.tiempoBlancasMs }
-    : { jugador: jugadorNegras,  color: 'b' as const, tiempoMs: timer.tiempoBlancasMs };
+    : { jugador: jugadorNegras,  color: 'b' as const, tiempoMs: timer.tiempoNegrasMs };
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
@@ -800,16 +819,30 @@ export default function VistaPartida({
                 esTurno={gameActual.turn() === jugadorArriba.color && partidaActiva}
               />
 
-              <div className="shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c]">
-                <ChessboardCore
-                  fen={fenVisible}
-                  squareStyles={estilosCombinados}
-                  orientation={orientacion}
-                  allowDragging={puedeArrastrar || puedeVerHighlights}
-                  onPieceDrop={puedeArrastrar ? handlePieceDrop : undefined}
-                  onPieceDrag={handlePieceDragWrapper}
-                  onSquareClick={onSquareClick}
-                />
+              <div className="shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c] flex">
+                {mostrarStockfish && (
+                  <div className="w-5 shrink-0 border-r-4 border-[#302e2c]">
+                    <EvalBarVertical
+                      evaluacion={stockfish.lineas[0]?.evaluacion ?? 0}
+                      mate={stockfish.lineas[0]?.mate ?? null}
+                      turnoBlancas={turnoBlancas}
+                      orientation={orientacion}
+                      activo={stockfish.activo && stockfish.lineas.length > 0}
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <ChessboardCore
+                    fen={fenVisible}
+                    squareStyles={estilosCombinados}
+                    orientation={orientacion}
+                    allowDragging={puedeArrastrar || puedeVerHighlights}
+                    onPieceDrop={puedeArrastrar ? handlePieceDrop : undefined}
+                    onPieceDrag={handlePieceDragWrapper}
+                    onSquareClick={onSquareClick}
+                    flechas={flechasTablero}
+                  />
+                </div>
               </div>
 
               <PanelJugador
@@ -864,6 +897,20 @@ export default function VistaPartida({
                 </div>
               </div>
             </div>
+
+            {mostrarStockfish && (
+              <PanelStockfish
+                activo={stockfish.activo}
+                cargando={stockfish.cargando}
+                profundidad={stockfish.profundidad}
+                lineas={stockfish.lineas}
+                turnoBlancas={turnoBlancas}
+                numeroJugada={numeroJugada}
+                onActivar={stockfish.activar}
+                onDesactivar={stockfish.desactivar}
+                onCambiarProfundidad={stockfish.setProfundidad}
+              />
+            )}
           </>
         )}
       </div>

@@ -183,7 +183,7 @@ export default function ListaParticipantes({
         </span>
       </div>
 
-      <div className="p-3 flex flex-col gap-3 max-h-[600px] overflow-y-auto">
+      <div className="p-3 flex flex-col gap-3 max-h-72 overflow-y-auto">
         {profesores.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
