@@ -121,7 +121,7 @@ export default function TablonObjetivosCard({
                 ) : (
                     <button
                     onClick={() => setMostrarForm(true)}
-                    className="flex items-center gap-1.5 text-sm text-rose-500 hover:text-rose-700 mt-1 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-700 mt-1 transition-colors cursor-pointer"
                     >
                     <Plus className="w-4 h-4" />
                     {esVistaGrupal ? 'Añadir objetivo a todos' : 'Añadir objetivo'}

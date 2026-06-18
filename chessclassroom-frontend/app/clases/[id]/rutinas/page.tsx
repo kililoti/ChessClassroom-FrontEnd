@@ -121,8 +121,20 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
         setEsProfesor(esProf);
  
         if (esProf) {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`, { headers });
-          if (res.ok) setAlumnos(await res.json());
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`,
+            { headers }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const lista = Array.isArray(data) ? data : (data.alumnos ?? []);
+            // Normalizar: el campo ID puede llamarse id, usuario_id, alumno_id, etc.
+            const normalizados: Alumno[] = lista.map((a: any) => ({
+              ...a,
+              id: a.id ?? a.usuario_id ?? a.alumno_id ?? a.user_id ?? '',
+            }));
+            setAlumnos(normalizados);
+          }
         } else {
           setMiId(usuario.id);
         }
@@ -151,7 +163,6 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
  
   const volverSemanaActual = () => setSemanaActual(getLunes(new Date()));
 
-  // Cargar torneos de la clase para mostrarlos en el calendario
   const cargarTorneos = useCallback(async () => {
     if (!inicializado) return;
     try {
@@ -246,7 +257,6 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
   };
  
   const handleEliminarEvento = async (eventoId: string, soloEste: boolean, desdeGrupo: boolean) => {
-    // Los torneos y entregas no se pueden eliminar desde el calendario
     if (eventoId.startsWith('torneo-') || eventoId.startsWith('entrega-')) return;
     try {
       await fetch(
@@ -293,7 +303,6 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  // Mezclar eventos normales con los torneos convertidos a evento
   const eventosTorneos = torneos
     .filter(t => t.fecha_inicio)
     .map(t => torneoAEvento(t, claseId));
@@ -334,7 +343,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
                 onChange={e => setAlumnoSeleccionado(e.target.value)}
                 className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 text-slate-700"
               >
-                <option value="">Grupo completo</option>
+                <option key="todos" value="">Grupo completo</option>
                 {alumnos.map(a => (
                   <option key={a.id} value={a.id}>{a.nombre} {a.apellidos}</option>
                 ))}
@@ -343,7 +352,7 @@ export default function RutinasPage({ params }: { params: Promise<{ id: string }
             {esProfesor && (
               <button
                 onClick={() => setMostrarModalEvento(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Nuevo evento
               </button>

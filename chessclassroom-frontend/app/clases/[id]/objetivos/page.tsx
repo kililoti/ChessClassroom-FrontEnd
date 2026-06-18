@@ -21,7 +21,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState<string>('');
   const [esProfesor, setEsProfesor] = useState(false);
-  const [miId, setMiId] = useState<string>(''); // ← ID del alumno logueado
+  const [miId, setMiId] = useState<string>('');
   const [mostrarModal, setMostrarModal] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [inicializado, setInicializado] = useState(false);
@@ -46,17 +46,21 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
         setEsProfesor(esProf);
 
         if (esProf) {
-          // Profesor → cargar lista de alumnos
           const resAlumnos = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/clases/${claseId}/alumnos`,
             { headers }
           );
           if (resAlumnos.ok) {
-            const dataAlumnos = await resAlumnos.json();
-            setAlumnos(dataAlumnos);
+            const data = await resAlumnos.json();
+            const lista = Array.isArray(data) ? data : (data.alumnos ?? []);
+            // Normalizar: el campo ID puede llamarse id, usuario_id, alumno_id, etc.
+            const normalizados: Alumno[] = lista.map((a: any) => ({
+              ...a,
+              id: a.id ?? a.usuario_id ?? a.alumno_id ?? a.user_id ?? '',
+            }));
+            setAlumnos(normalizados);
           }
         } else {
-          // Alumno → guardar su propio ID
           setMiId(usuario.id);
         }
       } catch (err) {
@@ -71,11 +75,8 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
   const cargarTablenes = useCallback(async () => {
     if (!inicializado) return;
 
-    // Alumno siempre usa su propio ID
-    // Profesor usa el alumno seleccionado (vacío = grupo completo)
     const idParaQuery = esProfesor ? alumnoSeleccionado : miId;
 
-    // Si es alumno y aún no tenemos su ID, esperamos
     if (!esProfesor && !miId) return;
 
     try {
@@ -246,7 +247,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
                 onChange={(e) => setAlumnoSeleccionado(e.target.value)}
                 className="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-700 cursor-pointer"
               >
-                <option value="">Grupo completo</option>
+                <option key="todos" value="">Grupo completo</option>
                 {alumnos.map(a => (
                   <option key={a.id} value={a.id}>
                     {a.nombre} {a.apellidos}
@@ -259,7 +260,7 @@ export default function ObjetivosPage({ params }: { params: Promise<{ id: string
             {esProfesor && (
               <button
                 onClick={() => setMostrarModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-xl hover:bg-rose-600 transition-colors shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Nuevo tablón
               </button>
