@@ -15,8 +15,6 @@ function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
 }
 
-// Tipos
-
 export interface ProgresoAlumno {
   id: string;
   estado: 'NO_INICIADO' | 'EN_PROGRESO' | 'COMPLETADO';
@@ -27,7 +25,7 @@ export interface ProgresoAlumno {
   comentario_alumno: string | null;
   puntuacion: number | null;
   comentario_revision: string | null;
-  tiempo_acumulado: number | null; // segundos totales con la página abierta
+  tiempo_acumulado: number | null;
 }
 
 export interface RespuestaAlumno {
@@ -57,8 +55,6 @@ export interface VisorEjercicioProps {
   onClose?: () => void;
 }
 
-// Componente
-
 export default function VisorEjercicio({
   ejercicioId,
   esProfesor,
@@ -71,7 +67,6 @@ export default function VisorEjercicio({
   onClose,
 }: VisorEjercicioProps) {
 
-  // Estado común
   const [orientacion, setOrientacion]   = useState<'white' | 'black'>('white');
   const [grabando, setGrabando]         = useState(false);
   const [tab, setTab]                   = useState<'tablero' | 'respuestas'>('tablero');
@@ -108,11 +103,9 @@ export default function VisorEjercicio({
     from: string; to: string; color: 'w' | 'b';
   } | null>(null);
 
-  // Refs
   const solucionMovs  = useRef<string[]>([]);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Permisos
   const evaluado = !esProfesor &&
     progresoProp?.puntuacion !== null &&
     progresoProp?.puntuacion !== undefined;
@@ -120,20 +113,20 @@ export default function VisorEjercicio({
   const puedeVerSolucion = esProfesor ||
     (fechaEntrega ? new Date() > new Date(fechaEntrega) : false);
 
-  // Hook de ajedrez
+  // ── CAMBIO 1: destructuring actualizado ───────────────────────────────────
   const {
     pgn, fenVisible, estilosCombinados,
-    indiceVista, setIndiceVista,
-    totalMoves, estamosEnElPresente,
-    historialMovimientos, gameActual,
+    estamosEnElPresente, gameActual,
+    historialMovimientos,
     pendingPromotion,
+    nodos, nodoActualId, irANodo,
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
     cargarPgn,
   } = useChessGame({ pgnInicial });
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Orientación desde pgnBase
   useEffect(() => {
     if (!pgnBase) return;
     const g = new Chess();
@@ -143,14 +136,12 @@ export default function VisorEjercicio({
     setOrientacion(g.turn() === 'w' ? 'white' : 'black');
   }, [pgnBase]);
 
-  // Parsear solución
   useEffect(() => {
     if (!solucionPgn) { solucionMovs.current = []; return; }
     const g = new Chess();
     try { g.loadPgn(solucionPgn); solucionMovs.current = g.history(); } catch {}
   }, [solucionPgn]);
 
-  // Fetch respuestas
   const fetchRespuestas = () => {
     if (!esProfesor) return;
     setCargandoResp(true);
@@ -165,13 +156,7 @@ export default function VisorEjercicio({
   useEffect(() => { fetchRespuestas(); }, [ejercicioId, esProfesor]);
   useEffect(() => { if (tab === 'respuestas') fetchRespuestas(); }, [tab]);
 
-  // ── Timer del alumno ──────────────────────────────────────────────────────
-  // Cuenta solo mientras la página está abierta.
-  // Arranca desde tiempo_acumulado (ya guardado en BD).
-  // Cada FLUSH_INTERVAL segundos envía los nuevos segundos al backend.
-  // Al desmontar guarda los segundos pendientes sin esperar el intervalo.
-
-  const FLUSH_INTERVAL = 10; // segundos entre guardados automáticos
+  const FLUSH_INTERVAL = 10;
 
   const timerDetenido = completado ||
     (fechaEntrega ? new Date() > new Date(fechaEntrega) : false);
@@ -225,12 +210,10 @@ export default function VisorEjercicio({
     return `${h}:${m}:${s}`;
   })();
 
-  // Sonido
   const reproducirSonido = (tipo: 'move' | 'capture') => {
     try { new Audio(`/sounds/${tipo}.mp3`).play().catch(() => {}); } catch {}
   };
 
-  // Lógica del alumno
   const ejecutarMovAlumno = (from: string, to: string, promotion: PromotionPiece = 'q'): boolean => {
     const tempGame = new Chess();
     try {
@@ -240,7 +223,7 @@ export default function VisorEjercicio({
     const move = tempGame.move({ from, to, promotion });
     if (!move) return false;
 
-    const indice     = gameActual.history().length;
+    const indice     = historialMovimientos.length;
     const esperado   = solucionMovs.current[indice];
     const esCorrecto = move.san === esperado;
     const esFinal    = esCorrecto && indice + 1 === solucionMovs.current.length;
@@ -328,8 +311,6 @@ export default function VisorEjercicio({
     ejecutarMovAlumno(pendingPromStudent.from, pendingPromStudent.to, piece);
     setPendingPromStudent(null);
   };
-
-  // Lógica del profesor
 
   const iniciarGrabacion = () => {
     cargarPgn(pgnInicial);
@@ -460,13 +441,11 @@ export default function VisorEjercicio({
     }
   };
 
-  // Derivados
   const estilosMerged = { ...estilosCombinados, ...flashStyles };
   const puedeArrastrar =
     grabando ||
     (!esProfesor && !completado && !mostrandoSolucion && estamosEnElPresente);
 
-  // Guardar evaluación del profesor
   const guardarEvaluacion = async () => {
     if (!comentarioVistaAlumno) return;
     setGuardandoEval(true);
@@ -497,24 +476,14 @@ export default function VisorEjercicio({
     tiempoAcumulado?: number | null,
   ) => {
     if (!inicio) return '—';
-
     let totalSegundos: number;
-
     if (fin) {
-      // Completado: usar diferencia de fechas (precisa)
-      totalSegundos = Math.floor(
-        (new Date(fin).getTime() - new Date(inicio).getTime()) / 1000
-      );
+      totalSegundos = Math.floor((new Date(fin).getTime() - new Date(inicio).getTime()) / 1000);
     } else if (tiempoAcumulado !== null && tiempoAcumulado !== undefined) {
-      // No completado: usar tiempo acumulado real (solo cuenta cuando la página estaba abierta)
       totalSegundos = tiempoAcumulado;
     } else {
-      // Fallback si no hay tiempo_acumulado aún
-      totalSegundos = Math.floor(
-        (new Date().getTime() - new Date(inicio).getTime()) / 1000
-      );
+      totalSegundos = Math.floor((new Date().getTime() - new Date(inicio).getTime()) / 1000);
     }
-
     const h = Math.floor(totalSegundos / 3600);
     const m = Math.floor((totalSegundos % 3600) / 60);
     const s = totalSegundos % 60;
@@ -528,7 +497,6 @@ export default function VisorEjercicio({
     NO_INICIADO: { label: 'Sin iniciar', color: 'bg-slate-100 text-slate-500' },
   } as const;
 
-  // Render
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
 
@@ -547,7 +515,6 @@ export default function VisorEjercicio({
         />
       )}
 
-      {/* Banner de ejercicio completado */}
       {bannerCompletado && (
         <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-5">
@@ -600,9 +567,7 @@ export default function VisorEjercicio({
             <div className="text-2xl font-bold text-slate-800 flex items-center gap-3">
               Ejercicio
               {grabando && (
-                <span className="text-sm font-semibold text-red-600 animate-pulse">
-                  ● Grabando solución
-                </span>
+                <span className="text-sm font-semibold text-red-600 animate-pulse">● Grabando solución</span>
               )}
             </div>
           </div>
@@ -724,7 +689,6 @@ export default function VisorEjercicio({
                 <div
                   key={r.id}
                   onClick={() => {
-                    // Si no hay progreso del alumno, cargar el PGN base del ejercicio
                     const pgnACargar = pgnCargar || pgnInicial;
                     cargarPgn(pgnACargar);
                     setTab('tablero');
@@ -741,7 +705,7 @@ export default function VisorEjercicio({
                     setPuntuacionProfesor(r.puntuacion ?? null);
                     setEvalGuardadaOk(false);
                   }}
-                  className="group bg-white border border-slate-200 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all cursor-pointer hover:border-blue-400 hover:shadow-md" 
+                  className="group bg-white border border-slate-200 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all cursor-pointer hover:border-blue-400 hover:shadow-md"
                 >
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-base transition-colors ${pgnCargar ? 'text-slate-900 group-hover:text-blue-700' : 'text-slate-600'}`}>
@@ -772,9 +736,7 @@ export default function VisorEjercicio({
                     {(r.comentario_revision || r.puntuacion !== null) && (
                       <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-xl p-4">
                         <div className="flex items-center gap-3 mb-2">
-                          <p className="text-[12px] font-bold text-blue-500 uppercase tracking-wide">
-                            Tu revisión
-                          </p>
+                          <p className="text-[12px] font-bold text-blue-500 uppercase tracking-wide">Tu revisión</p>
                           {r.puntuacion !== null && (
                             <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-100 border border-blue-200 rounded-lg">
                               <span className="text-[15px] font-black text-blue-700 leading-none">⭐ {r.puntuacion}</span>
@@ -801,12 +763,9 @@ export default function VisorEjercicio({
       {(tab === 'tablero' || grabando) && (
         <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-stretch justify-center">
 
-          {/* Panel izquierdo: comentario al grabar */}
           {esProfesor && grabando && (
             <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                Comentario de la solución
-              </label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Comentario de la solución</label>
               <textarea
                 className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 min-h-[200px]"
                 value={comentarioSolucion}
@@ -816,91 +775,84 @@ export default function VisorEjercicio({
             </div>
           )}
 
-          {/* Panel izquierdo: comentario solución (solo lectura) */}
           {mostrandoSolucion && comentarioSolucion && (
             <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                Comentario de la solución
-              </label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Comentario de la solución</label>
               <div className="flex-1 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                 {comentarioSolucion}
               </div>
             </div>
           )}
 
-          {/* Panel izquierdo: evaluación profesor al ver posición alumno */}
           {esProfesor && !grabando && comentarioVistaAlumno && (() => {
-            // Se puede evaluar si el alumno completó el ejercicio O si ha pasado la fecha de entrega
             const puedeEvaluar =
               comentarioVistaAlumno.estadoAlumno === 'COMPLETADO' ||
               (fechaEntrega ? new Date() > new Date(fechaEntrega) : false);
 
             return (
-            <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Revisión</label>
-              </div>
-              <div className="px-3 py-2 bg-slate-100 rounded-xl">
-                <p className="text-sm font-semibold text-slate-700">{comentarioVistaAlumno.nombre}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Comentario del alumno</p>
-                {comentarioVistaAlumno.comentario ? (
-                  <textarea readOnly rows={5}
-                    className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto"
-                    value={comentarioVistaAlumno.comentario}
-                  />
+              <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Revisión</label>
+                </div>
+                <div className="px-3 py-2 bg-slate-100 rounded-xl">
+                  <p className="text-sm font-semibold text-slate-700">{comentarioVistaAlumno.nombre}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Comentario del alumno</p>
+                  {comentarioVistaAlumno.comentario ? (
+                    <textarea readOnly rows={5}
+                      className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto"
+                      value={comentarioVistaAlumno.comentario}
+                    />
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-400 italic">Sin comentario.</div>
+                  )}
+                </div>
+                {puedeEvaluar ? (
+                  <>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Puntuación</p>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <button key={n}
+                            onClick={() => setPuntuacionProfesor(puntuacionProfesor === n ? null : n)}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border-2 ${
+                              puntuacionProfesor === n
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                            }`}
+                          >{n}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-1">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Tu comentario de revisión</p>
+                      <textarea rows={5} maxLength={350}
+                        className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                        value={revisionProfesor}
+                        onChange={e => setRevisionProfesor(e.target.value)}
+                        placeholder="Indica al alumno qué hizo bien, qué falló y cómo mejorar..."
+                      />
+                      <span className={`text-xs text-right ${revisionProfesor.length >= 350 ? 'text-red-500' : 'text-slate-500'}`}>
+                        {revisionProfesor.length}/350
+                      </span>
+                    </div>
+                    <button onClick={guardarEvaluacion} disabled={guardandoEval}
+                      className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-colors">
+                      {guardandoEval
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+                        : evalGuardadaOk ? '✓ Evaluación guardada' : 'Guardar evaluación'}
+                    </button>
+                  </>
                 ) : (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-400 italic">Sin comentario.</div>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-medium">
+                    Solo puedes evaluar cuando el alumno haya completado el ejercicio o haya pasado la fecha de entrega.
+                  </div>
                 )}
               </div>
-
-              {puedeEvaluar ? (
-                <>
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">Puntuación</p>
-                    <div className="flex gap-1.5">
-                      {[1, 2, 3, 4, 5].map(n => (
-                        <button key={n}
-                          onClick={() => setPuntuacionProfesor(puntuacionProfesor === n ? null : n)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors border-2 ${
-                            puntuacionProfesor === n
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400 hover:text-blue-600'
-                          }`}
-                        >{n}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 flex-1">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Tu comentario de revisión</p>
-                    <textarea rows={5} maxLength={350}
-                      className="flex-1 w-full p-3 border border-slate-300 rounded-xl text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-                      value={revisionProfesor}
-                      onChange={e => setRevisionProfesor(e.target.value)}
-                      placeholder="Indica al alumno qué hizo bien, qué falló y cómo mejorar..."
-                    />
-                    <span className={`text-xs text-right ${revisionProfesor.length >= 350 ? 'text-red-500' : 'text-slate-500'}`}>
-                      {revisionProfesor.length}/350
-                    </span>
-                  </div>
-                  <button onClick={guardarEvaluacion} disabled={guardandoEval}
-                    className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-colors">
-                    {guardandoEval
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
-                      : evalGuardadaOk ? '✓ Evaluación guardada' : 'Guardar evaluación'}
-                  </button>
-                </>
-              ) : (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-medium">
-                  Solo puedes evaluar cuando el alumno haya completado el ejercicio o haya pasado la fecha de entrega.
-                </div>
-              )}
-            </div>
             );
           })()}
 
-          {/* Panel izquierdo: timer y fallos del alumno */}
           {!esProfesor && !grabando && !mostrandoSolucion && (
             <div className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3">
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center gap-1">
@@ -950,7 +902,6 @@ export default function VisorEjercicio({
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
                     : comentarioGuardadoOk ? '✓ Guardado' : 'Guardar comentario'}
                 </button>
-
               </div>
             </div>
           )}
@@ -968,13 +919,13 @@ export default function VisorEjercicio({
             />
           </div>
 
-          {/* Planilla + botón girar tablero */}
+          {/* ── CAMBIO 2: Planilla con nuevas props ─────────────────────────── */}
           <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col gap-2">
             <div className="lg:h-[548px]">
               <Planilla
-                historialMovimientos={historialMovimientos}
-                indiceVista={indiceVista}
-                setIndiceVista={setIndiceVista}
+                nodos={nodos}
+                nodoActualId={nodoActualId}
+                irANodo={irANodo}
                 estamosEnElPresente={estamosEnElPresente}
                 irAlInicio={irAlInicio}
                 irAtras={irAtras}
@@ -982,6 +933,7 @@ export default function VisorEjercicio({
                 irAlFinal={irAlFinal}
               />
             </div>
+            {/* ──────────────────────────────────────────────────────────────── */}
             <div className="flex justify-end mt-2">
               <button
                 onClick={() => setOrientacion(o => o === 'white' ? 'black' : 'white')}
@@ -998,15 +950,11 @@ export default function VisorEjercicio({
         </div>
       )}
 
-      {/* Revisión del profesor — sección ancha debajo del tablero */}
+      {/* Revisión del profesor */}
       {!esProfesor && (progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined || progresoProp?.comentario_revision) && (
         <div className="w-full mt-4 px-4 max-w-7xl">
-          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">
-            Revisión del profesor
-          </p>
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">Revisión del profesor</p>
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-6 min-h-[200px]">
-
-            {/* Izquierda: label arriba, cajas y X/5 centradas verticalmente */}
             {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && (
               <div className="shrink-0 flex flex-col items-start">
                 <p className="text-xs font-bold text-blue-500 uppercase tracking-wide">Puntuación</p>
@@ -1022,18 +970,13 @@ export default function VisorEjercicio({
                 </div>
               </div>
             )}
-
-            {/* Separador vertical */}
             {progresoProp?.puntuacion !== null && progresoProp?.puntuacion !== undefined && progresoProp?.comentario_revision && (
               <div className="w-px bg-blue-200 self-stretch" />
             )}
-
-            {/* Derecha: comentario */}
             <div className="flex-1 flex flex-col gap-3">
               <p className="text-xs font-bold text-blue-500 uppercase tracking-wide">Comentario</p>
               {progresoProp?.comentario_revision ? (
-                <textarea
-                  readOnly
+                <textarea readOnly
                   className="flex-1 w-full p-3 bg-white border border-blue-200 rounded-xl text-sm text-slate-700 leading-relaxed resize-none outline-none overflow-y-auto min-h-[140px]"
                   value={progresoProp.comentario_revision}
                 />
@@ -1041,7 +984,6 @@ export default function VisorEjercicio({
                 <p className="text-sm text-blue-300 italic">Sin comentario.</p>
               )}
             </div>
-
           </div>
         </div>
       )}

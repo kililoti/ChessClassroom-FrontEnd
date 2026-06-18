@@ -4,7 +4,7 @@ import type { LineaAnalisis, FletchaStockfish } from '@/hooks/useStockfish';
 
 export type EventoAula =
   | { tipo: 'MOVIMIENTO';         pgn: string; fen: string; sonido: 'move' | 'capture'; emisor_id?: string }
-  | { tipo: 'NAVEGAR';            pgn: string; indice: number; sonido: 'move' | 'capture' }
+  | { tipo: 'NAVEGAR';            pgn: string; fen: string; sonido: 'move' | 'capture' }
   | { tipo: 'ORIENTACION';        orientacion: 'white' | 'black' }
   | { tipo: 'REINICIO';           pgn: string; fen: string }
   | { tipo: 'CARGA';              pgn: string; fen: string }

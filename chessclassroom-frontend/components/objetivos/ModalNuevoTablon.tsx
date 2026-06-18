@@ -41,7 +41,7 @@ export default function ModalNuevoTablon({ onCrear, onCerrar }: Props) {
               placeholder="Ej: Objetivos de ELO, Teoría de aperturas..."
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
-              className="w-full text-sm text-black px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300"
+              className="w-full text-sm text-black px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
               autoFocus
             />
           </div>
@@ -53,7 +53,7 @@ export default function ModalNuevoTablon({ onCrear, onCerrar }: Props) {
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={3}
-              className="w-full text-sm px-3 py-2 text-black rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 resize-none"
+              className="w-full text-sm px-3 py-2 text-black rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
 
@@ -63,7 +63,7 @@ export default function ModalNuevoTablon({ onCrear, onCerrar }: Props) {
               type="date"
               value={fechaLimite}
               onChange={(e) => setFechaLimite(e.target.value)}
-              className="w-full text-sm px-3 py-2 text-black rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-600"
+              className="w-full text-sm px-3 py-2 text-black rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 text-slate-600"
             />
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function ModalNuevoTablon({ onCrear, onCerrar }: Props) {
           <button
             onClick={handleCrear}
             disabled={!titulo.trim()}
-            className="px-4 py-2 text-sm bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
             Crear tablón
           </button>

@@ -235,7 +235,7 @@ export default function MaterialPage() {
                 <Plus className="w-4 h-4" /> {estamosEnRaiz ? 'Nueva carpeta' : 'Subcarpeta'}
               </button>
               {carpetaId && (
-                <button onClick={() => setModalMaterial(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-all font-semibold text-sm shadow-sm cursor-pointer">
+                <button onClick={() => setModalMaterial(true)} className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold text-sm shadow-sm cursor-pointer">
                   <Plus className="w-4 h-4" /> Añadir material
                 </button>
               )}

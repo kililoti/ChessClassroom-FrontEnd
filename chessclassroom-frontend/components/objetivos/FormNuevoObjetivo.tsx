@@ -24,14 +24,14 @@ export default function FormNuevoObjetivo({ onGuardar, onCancelar }: Props) {
         placeholder="Nombre del objetivo..."
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
-        className="w-full text-sm text-black px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 bg-white"
+        className="w-full text-sm text-black px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
         autoFocus
       />
       <input
         type="date"
         value={fechaLimite}
         onChange={(e) => setFechaLimite(e.target.value)}
-        className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-300 bg-white text-black"
+        className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-black"
       />
       <div className="flex gap-2 justify-end">
         <button
@@ -43,7 +43,7 @@ export default function FormNuevoObjetivo({ onGuardar, onCancelar }: Props) {
         <button
           onClick={handleGuardar}
           disabled={!titulo.trim()}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-rose-500 text-black rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-black rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Check className="w-4 h-4" /> Guardar
         </button>

@@ -118,36 +118,41 @@ export default function VistaPartida({
 
   const {
     pgn, fenVisible, estilosCombinados,
-    indiceVista, setIndiceVista,
-    totalMoves, estamosEnElPresente,
-    historialMovimientos, gameActual,
+    estamosEnElPresente,
+    historialMovimientos,         // usado en useEffect para arrancar el timer
+    gameActual,
     pendingPromotion,
+    planillaTokens, nodos, nodoActualId, irANodo,
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
     cargarPgn,
   } = useChessGame({ pgnInicial });
 
+  // Refs para timer — se rellenan después de crear el timer
   const stockfish    = useStockfish();
   const turnoBlancas = fenVisible.split(' ')[1] === 'w';
   const numeroJugada = parseInt(fenVisible.split(' ')[5], 10) || 1;
   const flechasTablero = mostrarStockfish && stockfish.activo ? stockfish.flechas : [];
 
+  // Analizar FEN cada vez que cambia la posición (solo cuando está activo)
   useEffect(() => {
     if (mostrarStockfish && stockfish.activo) {
       stockfish.analizarFen(fenVisible);
     }
-  }, [fenVisible, stockfish.activo, mostrarStockfish]);
+  }, [fenVisible, stockfish.activo, mostrarStockfish]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Limpiar Stockfish al desmontar
   useEffect(() => {
     return () => { stockfish.desactivar(); };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const timerDetenerRef    = useRef<() => void>(() => {});
   const timerSincronizarRef = useRef<(b: number, n: number, t: 'w'|'b') => void>(() => {});
   const timerSetTurnoRef    = useRef<(t: 'w'|'b') => void>(() => {});
   const timerSetTiemposRef  = useRef<(b: number, n: number) => void>(() => {});
 
+  // Cerrojo para evitar procesar el fin de partida múltiples veces
   const partidaFinalizadaRef = useRef(estadoInicial === 'finalizada' || estadoInicial === 'abortada');
 
   const procesarFinDePartida = useCallback((nuevoResultado: string, nuevoMotivo: string) => {
@@ -162,9 +167,13 @@ export default function VistaPartida({
     onPartidaFinalizada?.(nuevoResultado, nuevoMotivo);
   }, [onEstadoCambiado, onPartidaFinalizada]);
 
+  // Muestra el banner de aborto inmediatamente cuando expira la cuenta atrás,
+  // sin esperar al broadcast del backend (que puede tardar hasta 5s por el job).
+  // El backend confirmará el resultado y procesarFinDePartida lo ignorará (cerrojo).
   const procesarAbortoInmediato = useCallback(() => {
     if (partidaFinalizadaRef.current) return;
     partidaFinalizadaRef.current = true;
+    // Determinar quién provocó el aborto: el que no ha hecho su primer movimiento
     const resultado = !blancoMovioRef.current ? '0-1' : '1-0';
     setEstado('abortada');
     setResultado(resultado);
@@ -196,6 +205,7 @@ export default function VistaPartida({
   const iniciandoRef   = useRef(false);
   const numMovimientosRef = useRef(0);
 
+  // Rastrear qué colores han hecho su primer movimiento en la partida
   const blancoMovioRef = useRef(false);
   const negroMovioRef  = useRef(false);
   const ambosMovieron  = () => blancoMovioRef.current && negroMovioRef.current;
@@ -214,6 +224,7 @@ export default function VistaPartida({
         setCuentaAtrasAborto(prev => {
           if (prev === null || prev <= 1) {
             if (cuentaAtrasRef.current) clearInterval(cuentaAtrasRef.current);
+            // setTimeout para salir del ciclo de render antes de actualizar otros componentes
             if (prev !== null) setTimeout(() => onExpira?.(), 0);
             return null;
           }
@@ -222,6 +233,7 @@ export default function VistaPartida({
       }, 1000);
     };
 
+    // Si el timestamp es futuro, esperar hasta que llegue antes de arrancar
     const msRestantes = desdeTimestamp
       ? new Date(desdeTimestamp).getTime() - Date.now()
       : 0;
@@ -238,6 +250,7 @@ export default function VistaPartida({
     setCuentaAtrasAborto(null);
   };
 
+  // Limpiar cuenta atrás al desmontar
   useEffect(() => {
     return () => {
       if (cuentaAtrasRef.current) clearInterval(cuentaAtrasRef.current);
@@ -245,21 +258,26 @@ export default function VistaPartida({
     };
   }, []);
 
+  // Añadirse a sí mismo al set de presentes al montar
   useEffect(() => {
     if (soyJugador) {
       setPresentes(prev => new Set(prev).add(usuarioId));
     }
   }, [soyJugador, usuarioId]);
 
+  // Arrancar timer cuando el historial ya está disponible (puede llegar tarde por el PGN)
   const timerArracadoRef = useRef(false);
 
+  // CASO 1: Partida ya iniciada al cargar (reload o espectador)
   useEffect(() => {
     if (estadoInicial !== 'iniciada') return;
 
+    // Usar el estado real de la BD, no asumir que ambos movieron
     blancoMovioRef.current = primerMovimientoBlancas;
     negroMovioRef.current  = primerMovimientoNegras;
 
     if (blancoMovioRef.current && negroMovioRef.current) {
+      // Ambos movieron → timer normal
       let tiempoB = tiempoRestanteBlancasMs ?? tiempoBlancasMs;
       let tiempoN = tiempoRestanteNegrasMs  ?? tiempoNegrasMs;
 
@@ -275,6 +293,7 @@ export default function VistaPartida({
       }, 50);
       return () => clearTimeout(t);
     } else {
+      // Fase de aborto — si el timestamp es futuro, bloquear el tablero hasta que llegue
       if (timestampUltimoMovimiento) {
         const msHastaInicio = new Date(timestampUltimoMovimiento).getTime() - Date.now();
         if (msHastaInicio > 0) {
@@ -282,6 +301,7 @@ export default function VistaPartida({
           setEsperandoInicio(true);
           setSegundosParaInicio(segs);
 
+          // Cuenta atrás de la pantalla de espera
           const intervalo = setInterval(() => {
             setSegundosParaInicio(prev => {
               if (prev <= 1) { clearInterval(intervalo); return 0; }
@@ -298,11 +318,15 @@ export default function VistaPartida({
           return () => { clearInterval(intervalo); clearTimeout(timeout); };
         }
       }
+      // Si ya pasó el timestamp, arrancar la cuenta atrás directamente
       iniciarCuentaAtras(timestampUltimoMovimiento ?? undefined, procesarAbortoInmediato);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // CASO 2: Flujo en vivo — arrancar timer cuando ambos hacen su primer movimiento
   useEffect(() => {
+    // No arrancar si el timer ya está corriendo (CASO 1 con ambos movidos ya lo inició)
     if (timerArracadoRef.current) return;
     if (!blancoMovioRef.current || !negroMovioRef.current) return;
     timerArracadoRef.current = true;
@@ -320,7 +344,7 @@ export default function VistaPartida({
     }
 
     timerSincronizarRef.current(tiempoB, tiempoN, turnoInicial);
-  }, [historialMovimientos.length]);
+  }, [historialMovimientos.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleEvento = useCallback((evento: EventoPartida) => {
     switch (evento.tipo) {
@@ -356,7 +380,7 @@ export default function VistaPartida({
           else                       negroMovioRef.current  = true;
 
           if (ambosMovieron()) {
-            timerArracadoRef.current = true;
+            timerArracadoRef.current = true; // evitar que el useEffect sobreescriba
             timerSincronizarRef.current(
               evento.tiempo_restante_blancas_ms,
               evento.tiempo_restante_negras_ms,
@@ -365,14 +389,14 @@ export default function VistaPartida({
             detenerCuentaAtras();
           } else {
             timerSetTurnoRef.current(evento.turno);
+            // El primero movió — resetear cuenta atrás para el segundo jugador
             iniciarCuentaAtras(undefined, procesarAbortoInmediato);
           }
         }
         break;
 
       case 'NAVEGAR':
-        cargarPgn(evento.pgn);
-        setTimeout(() => setIndiceVista(evento.indice), 0);
+        cargarPgn(evento.pgn);  // navega al final del PGN
         reproducirSonido(evento.sonido);
         break;
 
@@ -391,6 +415,7 @@ export default function VistaPartida({
         break;
 
       case 'FIN':
+        // Ajuste visual del reloj si fue por tiempo
         if (evento.motivo === 'tiempo') {
           if (evento.resultado === '1-0') timerSetTiemposRef.current(timer.tiempoBlancasMs, 0);
           else if (evento.resultado === '0-1') timerSetTiemposRef.current(0, timer.tiempoNegrasMs);
@@ -407,7 +432,7 @@ export default function VistaPartida({
         onEstadoCambiado?.('abortada');
         break;
     }
-  }, [usuarioId, soyJugador, estado, jugadorBlancas, jugadorNegras, cargarPgn, setIndiceVista, onJugadorUnido, procesarFinDePartida, timer.tiempoBlancasMs, timer.tiempoNegrasMs]);
+  }, [usuarioId, soyJugador, estado, jugadorBlancas, jugadorNegras, cargarPgn, onJugadorUnido, procesarFinDePartida, timer.tiempoBlancasMs, timer.tiempoNegrasMs]);
 
   const { emitir } = usePartidaRealtime({ partidaId, onEvento: handleEvento });
 
@@ -433,9 +458,11 @@ export default function VistaPartida({
     };
   }, [soyJugador, estado, usuarioId, emitir]);
 
+  // Fallback para el jugador que NO llama /iniciar (negras):
+  // si ambos están presentes pero el INICIO no llegó, verificar el servidor
   useEffect(() => {
     if (!soyJugador || estado !== 'esperando') return;
-    if (soyBlancas) return;
+    if (soyBlancas) return; // blancas llama /iniciar directamente
     if (!jugadorBlancas || !jugadorNegras) return;
     if (!presentes.has(jugadorBlancas.id) || !presentes.has(jugadorNegras.id)) return;
 
@@ -456,7 +483,7 @@ export default function VistaPartida({
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [presentes, estado, soyJugador, soyBlancas, jugadorBlancas, jugadorNegras, partidaId, onEstadoCambiado]);
+  }, [presentes, estado, soyJugador, soyBlancas, jugadorBlancas, jugadorNegras, partidaId, onEstadoCambiado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (estado !== 'esperando') return;
@@ -479,6 +506,7 @@ export default function VistaPartida({
           setEstado('iniciada');
           onEstadoCambiado?.('iniciada');
           iniciarCuentaAtras(timestamp, procesarAbortoInmediato);
+          // El backend ya emitió INICIO via Broadcast — no hace falta emitirlo aquí
         } else {
           const d = await res.json();
           if (res.status === 400) {
@@ -512,6 +540,8 @@ export default function VistaPartida({
     iniciar();
   }, [presentes, estado, soyBlancas, jugadorBlancas, jugadorNegras, partidaId, emitir, onEstadoCambiado]);
 
+  // ── Realizar movimiento ────────────────────────────────────────────────────
+
   const enviarMovimiento = useCallback(async (
     from: string,
     to: string,
@@ -539,7 +569,7 @@ export default function VistaPartida({
 
       const nuevoTurno = d.turno ?? (gameActual.turn() === 'w' ? 'b' : 'w');
       if (ambosMovieron()) {
-        timerArracadoRef.current = true;
+        timerArracadoRef.current = true; // evitar que el useEffect sobreescriba
         timerSincronizarRef.current(
           d.tiempo_restante_blancas_ms,
           d.tiempo_restante_negras_ms,
@@ -548,6 +578,7 @@ export default function VistaPartida({
         detenerCuentaAtras();
       } else {
         timerSetTurnoRef.current(nuevoTurno);
+        // El primero movió — resetear cuenta atrás para el segundo jugador
         iniciarCuentaAtras(undefined, procesarAbortoInmediato);
       }
 
@@ -599,6 +630,8 @@ export default function VistaPartida({
     }
   }, [handlePromotionSelect, pendingPromotion, enviarMovimiento]);
 
+  // ── Acciones de partida ────────────────────────────────────────────────────
+
   const abandonar = async () => {
     if (!confirm('¿Seguro que quieres abandonar? Perderás la partida.')) return;
     const res = await fetch(`${API}/partidas/${partidaId}/abandonar`, {
@@ -646,6 +679,7 @@ export default function VistaPartida({
     setOfrecioTablas(null);
   }, [emitir, partidaId]);
 
+  // Exportar estado de tablas al padre para que renderice los widgets
   const onTablasChangeRef = useRef(onTablasChange);
   useEffect(() => { onTablasChangeRef.current = onTablasChange; }, [onTablasChange]);
   useEffect(() => {
@@ -656,9 +690,12 @@ export default function VistaPartida({
     setOrientacion(o => o === 'white' ? 'black' : 'white');
   };
 
+  // ── Helpers UI ─────────────────────────────────────────────────────────────
+
   const nombreBlancas = jugadorBlancas ? `${jugadorBlancas.nombre} ${jugadorBlancas.apellidos}` : 'Libre';
   const nombreNegras  = jugadorNegras  ? `${jugadorNegras.nombre}  ${jugadorNegras.apellidos}`  : 'Libre';
 
+  const rivalOfrecioTablas = ofrecioTablas !== null && ofrecioTablas !== usuarioId;
   const yoOfreciTablas     = ofrecioTablas === usuarioId;
 
   const tiempoBlancasColor = timer.tiempoBlancasMs < 30000 ? 'text-red-500' : 'text-slate-800';
@@ -696,6 +733,8 @@ export default function VistaPartida({
     return { icono: '🏁', titulo: labelResultado() ?? 'Partida finalizada', subtitulo: motivoLabel[motivo ?? ''] ?? motivo ?? '', color: 'bg-slate-50' };
   };
 
+  // ── Panel de jugador ───────────────────────────────────────────────────────
+
   const PanelJugador = ({
     jugador, color, tiempoMs, esTurno,
   }: {
@@ -708,6 +747,7 @@ export default function VistaPartida({
     const soyYo  = jugador?.id === usuarioId;
     const tiempo = color === 'w' ? tiempoBlancasColor : tiempoNegrasColor;
 
+    // Mostrar cuenta atrás de aborto si es el turno de este color y aún no movió
     const primeroMovio = color === 'w' ? blancoMovioRef.current : negroMovioRef.current;
     const mostrarAborto = cuentaAtrasAborto !== null && esTurno && !primeroMovio && partidaActiva;
 
@@ -740,6 +780,8 @@ export default function VistaPartida({
     );
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   const jugadorArriba = orientacion === 'white'
     ? { jugador: jugadorNegras,  color: 'b' as const, tiempoMs: timer.tiempoNegrasMs }
     : { jugador: jugadorBlancas, color: 'w' as const, tiempoMs: timer.tiempoBlancasMs };
@@ -754,7 +796,7 @@ export default function VistaPartida({
       {bannerFin && (() => {
         const info = infoBannerFin();
         return (
-          <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6">
+          <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6 bg-slate-900/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-5">
               <div className={`w-20 h-20 rounded-full ${info.color} flex items-center justify-center`}>
                 <span className="text-4xl">{info.icono}</span>
@@ -770,14 +812,14 @@ export default function VistaPartida({
               </div>
               <button
                 onClick={() => setBannerFin(false)}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
               >
                 <X className="w-4 h-4" /> Revisar la partida
               </button>
               {onVolver && (
                 <button
                   onClick={onVolver}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   <Trophy className="w-4 h-4" /> Volver al torneo
                 </button>
@@ -795,9 +837,47 @@ export default function VistaPartida({
         />
       )}
 
+
+
+      {/* Oferta de tablas */}
+      {rivalOfrecioTablas && soyJugador && (
+        <div className="w-full mb-4 px-2">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+              <Handshake className="w-4 h-4" /> Tu rival ofrece tablas
+            </p>
+            <div className="flex gap-2">
+              <button onClick={rechazarTablas} className="px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Rechazar</button>
+              <button onClick={aceptarTablas}  className="px-3 py-1.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Aceptar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {yoOfreciTablas && (
+        <div className="w-full mb-4 px-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <p className="text-sm text-slate-500 flex items-center gap-2">
+              <Handshake className="w-4 h-4" /> Oferta de tablas enviada, esperando respuesta...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tablasRechazadas && !yoOfreciTablas && (
+        <div className="w-full mb-4 px-2">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+            <p className="text-sm text-red-600 font-semibold flex items-center gap-2">
+              <Handshake className="w-4 h-4" /> Tu oferta de tablas ha sido rechazada
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tablero + Planilla */}
-      <div className="w-full flex flex-col lg:flex-row gap-4 px-2 items-stretch justify-center mt-2">
+      <div className="w-full flex flex-col lg:flex-row gap-4 px-2 items-stretch justify-center">
         {esperandoInicio ? (
+          /* Pantalla de espera: oculta tablero y planilla hasta que comience la fase de aborto */
           <div className="flex-1 flex flex-col gap-3 items-center justify-center min-h-[400px]">
             <div className="h-14 w-full max-w-[560px] rounded-xl bg-slate-100 animate-pulse" />
             <div className="w-full max-w-[560px] aspect-square rounded-sm bg-slate-200 flex flex-col items-center justify-center gap-4">
@@ -852,7 +932,6 @@ export default function VistaPartida({
                 esTurno={gameActual.turn() === jugadorAbajo.color && partidaActiva}
               />
 
-              {/* Barra de Acciones inferior unificada */}
               <div className="flex gap-2 justify-end">
                 {soyJugador && partidaActiva && (
                   <>
@@ -873,8 +952,7 @@ export default function VistaPartida({
                 )}
                 <button
                   onClick={handleGirar}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors shadow-sm cursor-pointer"
-                  title="Girar tablero"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" /> Girar tablero
                 </button>
@@ -885,9 +963,9 @@ export default function VistaPartida({
               <div className="absolute inset-0 flex flex-col">
                 <div className="flex-1 overflow-y-auto pr-2">
                   <Planilla
-                    historialMovimientos={historialMovimientos}
-                    indiceVista={indiceVista}
-                    setIndiceVista={setIndiceVista}
+                    nodos={nodos}
+                    nodoActualId={nodoActualId}
+                    irANodo={irANodo}
                     estamosEnElPresente={estamosEnElPresente}
                     irAlInicio={irAlInicio}
                     irAtras={irAtras}
