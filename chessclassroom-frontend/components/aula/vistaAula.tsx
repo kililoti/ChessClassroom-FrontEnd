@@ -22,10 +22,9 @@ export interface VistaAulaProps {
   onEmitirRef?: (emitir: (evento: EventoAula) => void) => void;
   onStockfishRecibido?: (lineas: LineaAnalisis[], flechas: FletchaStockfish[]) => void;
   onSolicitarStockfish?: () => void;
-  // Props de display Stockfish — gestionado por AulaPage (solo profesor)
   flechasStockfish?: FletchaStockfish[];
-  mostrarEvalBar?: boolean;       // solo profesor (gestionado por AulaPage)
-  evalLinea?: LineaAnalisis | null; // solo profesor
+  mostrarEvalBar?: boolean;
+  evalLinea?: LineaAnalisis | null;
 }
 
 function reproducirSonido(tipo: 'move' | 'capture') {
@@ -64,8 +63,7 @@ export default function VistaAula({
     pgn, fenVisible, estilosCombinados,
     estamosEnElPresente, gameActual,
     pendingPromotion, orientacionInicial,
-    // árbol de variantes
-    planillaTokens, nodos, nodoActualId, irANodo,
+    nodos, nodoActualId, irANodo,
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
@@ -109,20 +107,15 @@ export default function VistaAula({
           setPuedeNegras(evento.puede_mover_negras);
         }
         break;
-
-      // ── CAMBIO 2: guardar eval y flechas localmente en el alumno ──────────
       case 'STOCKFISH':
         if (!esProfesor) {
           const lineas  = evento.activo ? evento.lineas  : [];
           const flechas = evento.activo ? evento.flechas : [];
           onStockfishRecibido?.(lineas, flechas);
-          // Guardar eval localmente para mostrar la barra al alumno
           setEvalLineaAlumno(lineas[0] ?? null);
           setMostrarEvalAlumno(evento.activo && lineas.length > 0);
         }
         break;
-      // ──────────────────────────────────────────────────────────────────────
-
       case 'SOLICITAR_STOCKFISH':
         if (esProfesor) onSolicitarStockfish?.();
         break;
@@ -131,11 +124,9 @@ export default function VistaAula({
 
   const { emitir } = useAulaRealtime({ aulaId, esProfesor, onEvento: handleEvento });
 
-  // Mantener ref estable de emitir para los handlers de navegación
   useEffect(() => { emitirRef.current = emitir; }, [emitir]);
   useEffect(() => { onEmitirRef?.(emitir); }, [emitir, onEmitirRef]);
 
-  // Alumno: solicitar estado actual de Stockfish al conectarse
   useEffect(() => {
     if (esProfesor) return;
     const t = setTimeout(() => { emitir({ tipo: 'SOLICITAR_STOCKFISH' }); }, 1500);
@@ -169,7 +160,7 @@ export default function VistaAula({
     if (resultado.exito) {
       emitir({
         tipo: 'MOVIMIENTO',
-        pgn: resultado.pgn,  // árbol completo con variantes
+        pgn: resultado.pgn,
         fen: resultado.fen,
         sonido: resultado.captura ? 'capture' : 'move',
         emisor_id: usuarioId,
@@ -177,21 +168,21 @@ export default function VistaAula({
       persistirTablero(resultado.pgn, resultado.fen);
     }
     return resultado;
-  }, [onPieceDrop, emitir, nodos, nodoActualId, usuarioId, persistirTablero]);
+  }, [onPieceDrop, emitir, usuarioId, persistirTablero]);
 
   const handlePromotionSelectAula = useCallback((piece: Parameters<typeof handlePromotionSelect>[0]) => {
     const resultado = handlePromotionSelect(piece);
     if (resultado.exito) {
       emitir({
         tipo: 'MOVIMIENTO',
-        pgn: resultado.pgn,  // árbol completo con variantes
+        pgn: resultado.pgn,
         fen: resultado.fen,
         sonido: resultado.captura ? 'capture' : 'move',
         emisor_id: usuarioId,
       });
       persistirTablero(resultado.pgn, resultado.fen);
     }
-  }, [handlePromotionSelect, emitir, nodos, nodoActualId, usuarioId, persistirTablero]);
+  }, [handlePromotionSelect, emitir, usuarioId, persistirTablero]);
 
   const handlePieceDrag = useCallback((args: Parameters<typeof onPieceDrag>[0]) => {
     return onPieceDrag(args);
@@ -265,8 +256,8 @@ export default function VistaAula({
     }
   }, [irAlFinal, nodos, nodoActualId, esProfesor, pgn]);
 
-  // ── Valores efectivos de eval bar (profesor: props de AulaPage; alumno: estado local) ──
-  const evalLineaEfectiva   = esProfesor ? evalLinea    : evalLineaAlumno;
+  // ── Valores efectivos de eval bar ──────────────────────────────────────────
+  const evalLineaEfectiva   = esProfesor ? evalLinea     : evalLineaAlumno;
   const mostrarEvalEfectivo = esProfesor ? mostrarEvalBar : mostrarEvalAlumno;
 
   const handleGirar = () => {
@@ -281,41 +272,6 @@ export default function VistaAula({
     emitir({ tipo: 'REINICIO', pgn: '', fen: fenInicial });
     persistirTablero('', fenInicial);
   };
-
-  const sonidoDeIndice = useCallback((indice: number): 'move' | 'capture' => {
-    if (indice <= 0) return 'move';
-    return historialMovimientos[indice - 1]?.captured ? 'capture' : 'move';
-  }, [historialMovimientos]);
-
-  const handleSetIndiceVista = useCallback((indice: number) => {
-    setIndiceVista(indice);
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice, sonido: sonidoDeIndice(indice) });
-  }, [setIndiceVista, esProfesor, pgn, emitir, sonidoDeIndice]);
-
-  const handleIrAlInicio = useCallback(() => {
-    irAlInicio();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: 0, sonido: 'move' });
-  }, [irAlInicio, esProfesor, pgn, emitir]);
-
-  const handleIrAtras = useCallback(() => {
-    irAtras();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.max(0, indiceVista - 1), sonido: sonidoDeIndice(Math.max(0, indiceVista - 1)) });
-  }, [irAtras, esProfesor, pgn, indiceVista, emitir, sonidoDeIndice]);
-
-  const handleIrAdelante = useCallback(() => {
-    irAdelante();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.min(totalMoves, indiceVista + 1), sonido: sonidoDeIndice(Math.min(totalMoves, indiceVista + 1)) });
-  }, [irAdelante, esProfesor, pgn, indiceVista, totalMoves, emitir, sonidoDeIndice]);
-
-  const handleIrAlFinal = useCallback(() => {
-    irAlFinal();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: totalMoves, sonido: sonidoDeIndice(totalMoves) });
-  }, [irAlFinal, esProfesor, pgn, totalMoves, emitir, sonidoDeIndice]);
-
-  // ── CAMBIO 3: valores efectivos según rol ─────────────────────────────────
-  const evalLineaEfectiva  = esProfesor ? evalLinea    : evalLineaAlumno;
-  const mostrarEvalEfectivo = esProfesor ? mostrarEvalBar : mostrarEvalAlumno;
-  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
@@ -371,7 +327,6 @@ export default function VistaAula({
               />
             </div>
           )}
-          {/* ────────────────────────────────────────────────────────────────── */}
           <div className="flex-1">
             <ChessboardCore
               key={`${puedeBlancas}-${puedeNegras}`}
