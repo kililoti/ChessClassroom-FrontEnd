@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useChessGame, MoveResult } from '@/hooks/useChessGame';
 import { useAulaRealtime, EventoAula } from '@/hooks/useAulaRealtime';
 import type { LineaAnalisis, FletchaStockfish } from '@/hooks/useStockfish';
@@ -22,10 +22,9 @@ export interface VistaAulaProps {
   onEmitirRef?: (emitir: (evento: EventoAula) => void) => void;
   onStockfishRecibido?: (lineas: LineaAnalisis[], flechas: FletchaStockfish[]) => void;
   onSolicitarStockfish?: () => void;
-  // Props de display Stockfish — gestionado por AulaPage
   flechasStockfish?: FletchaStockfish[];
-  mostrarEvalBar?: boolean;
-  evalLinea?: LineaAnalisis | null;
+  mostrarEvalBar?: boolean;       // solo profesor (gestionado por AulaPage)
+  evalLinea?: LineaAnalisis | null; // solo profesor
 }
 
 function reproducirSonido(tipo: 'move' | 'capture') {
@@ -53,27 +52,31 @@ export default function VistaAula({
   const [puedeBlancas, setPuedeBlancas] = useState(permisosIniciales?.puede_mover_blancas ?? false);
   const [puedeNegras, setPuedeNegras]   = useState(permisosIniciales?.puede_mover_negras  ?? false);
 
+  // Eval bar para alumnos (recibida via evento STOCKFISH)
+  const [evalLineaAlumno, setEvalLineaAlumno]     = useState<LineaAnalisis | null>(null);
+  const [mostrarEvalAlumno, setMostrarEvalAlumno] = useState(false);
+
+  // Ref estable para emitir (evita dependencias cíclicas en callbacks)
+  const emitirRef = useRef<((evento: EventoAula) => void) | null>(null);
+
   const {
     pgn, fenVisible, estilosCombinados,
-    indiceVista, setIndiceVista,
-    totalMoves, estamosEnElPresente,
-    historialMovimientos, gameActual,
-    pendingPromotion,
-    orientacionInicial,
+    estamosEnElPresente, gameActual,
+    pendingPromotion, orientacionInicial,
+    // árbol de variantes
+    planillaTokens, nodos, nodoActualId, irANodo,
     irAlInicio, irAtras, irAdelante, irAlFinal,
     onPieceDrop, onPieceDrag, onSquareClick,
     handlePromotionSelect, handlePromotionCancel,
     cargarPgn, reiniciar,
   } = useChessGame({ pgnInicial });
 
-  const flechasTablero = flechasStockfish; // profesor: sus flechas; alumno: flechas recibidas del profesor
+  const flechasTablero = flechasStockfish;
   const turnoBlancas   = fenVisible.split(' ')[1] === 'w';
-  const numeroJugada   = parseInt(fenVisible.split(' ')[5], 10) || 1;
 
   useEffect(() => { setOrientacion(orientacionInicial); }, [orientacionInicial]);
   useEffect(() => { onPgnChange?.(pgn); }, [pgn, onPgnChange]);
   useEffect(() => { onFenChange?.(fenVisible); }, [fenVisible, onFenChange]);
-
   useEffect(() => {
     setPuedeBlancas(permisosIniciales?.puede_mover_blancas ?? false);
     setPuedeNegras(permisosIniciales?.puede_mover_negras  ?? false);
@@ -83,7 +86,7 @@ export default function VistaAula({
     switch (evento.tipo) {
       case 'MOVIMIENTO':
         if (evento.emisor_id === usuarioId) break;
-        cargarPgn(evento.pgn);
+        cargarPgn(evento.pgn, evento.fen);
         reproducirSonido(evento.sonido);
         break;
       case 'CARGA':
@@ -92,8 +95,7 @@ export default function VistaAula({
         break;
       case 'NAVEGAR':
         if (!esProfesor) {
-          cargarPgn(evento.pgn);
-          setTimeout(() => setIndiceVista(evento.indice), 0);
+          cargarPgn(evento.pgn, evento.fen);
           reproducirSonido(evento.sonido);
         }
         break;
@@ -108,29 +110,30 @@ export default function VistaAula({
         break;
       case 'STOCKFISH':
         if (!esProfesor) {
-          onStockfishRecibido?.(
-            evento.activo ? evento.lineas : [],
-            evento.activo ? evento.flechas : [],
-          );
+          const lineas  = evento.activo ? evento.lineas  : [];
+          const flechas = evento.activo ? evento.flechas : [];
+          onStockfishRecibido?.(lineas, flechas);
+          // Guardar eval localmente para mostrar la barra al alumno
+          setEvalLineaAlumno(lineas[0] ?? null);
+          setMostrarEvalAlumno(evento.activo && lineas.length > 0);
         }
         break;
       case 'SOLICITAR_STOCKFISH':
-        // El profesor recibe la solicitud y responde via AulaPage
         if (esProfesor) onSolicitarStockfish?.();
         break;
     }
-  }, [esProfesor, usuarioId, cargarPgn, setIndiceVista, onStockfishRecibido, onSolicitarStockfish]);
+  }, [esProfesor, usuarioId, cargarPgn, onStockfishRecibido, onSolicitarStockfish]);
 
   const { emitir } = useAulaRealtime({ aulaId, esProfesor, onEvento: handleEvento });
 
+  // Mantener ref estable de emitir para los handlers de navegación
+  useEffect(() => { emitirRef.current = emitir; }, [emitir]);
   useEffect(() => { onEmitirRef?.(emitir); }, [emitir, onEmitirRef]);
 
-  // Alumno: al conectarse solicita el estado actual de Stockfish al profesor
+  // Alumno: solicitar estado actual de Stockfish al conectarse
   useEffect(() => {
     if (esProfesor) return;
-    const t = setTimeout(() => {
-      emitir({ tipo: 'SOLICITAR_STOCKFISH' });
-    }, 1500); // esperar a que el canal esté suscrito
+    const t = setTimeout(() => { emitir({ tipo: 'SOLICITAR_STOCKFISH' }); }, 1500);
     return () => clearTimeout(t);
   }, [esProfesor, emitir]);
 
@@ -159,23 +162,107 @@ export default function VistaAula({
   const handlePieceDrop = useCallback((args: Parameters<typeof onPieceDrop>[0]): MoveResult => {
     const resultado = onPieceDrop(args);
     if (resultado.exito) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move', emisor_id: usuarioId });
+      emitir({
+        tipo: 'MOVIMIENTO',
+        pgn: resultado.pgn,  // árbol completo con variantes
+        fen: resultado.fen,
+        sonido: resultado.captura ? 'capture' : 'move',
+        emisor_id: usuarioId,
+      });
       persistirTablero(resultado.pgn, resultado.fen);
     }
     return resultado;
-  }, [onPieceDrop, emitir, usuarioId, persistirTablero]);
+  }, [onPieceDrop, emitir, nodos, nodoActualId, usuarioId, persistirTablero]);
 
   const handlePromotionSelectAula = useCallback((piece: Parameters<typeof handlePromotionSelect>[0]) => {
     const resultado = handlePromotionSelect(piece);
     if (resultado.exito) {
-      emitir({ tipo: 'MOVIMIENTO', pgn: resultado.pgn, fen: resultado.fen, sonido: resultado.captura ? 'capture' : 'move', emisor_id: usuarioId });
+      emitir({
+        tipo: 'MOVIMIENTO',
+        pgn: resultado.pgn,  // árbol completo con variantes
+        fen: resultado.fen,
+        sonido: resultado.captura ? 'capture' : 'move',
+        emisor_id: usuarioId,
+      });
       persistirTablero(resultado.pgn, resultado.fen);
     }
-  }, [handlePromotionSelect, emitir, usuarioId, persistirTablero]);
+  }, [handlePromotionSelect, emitir, nodos, nodoActualId, usuarioId, persistirTablero]);
 
   const handlePieceDrag = useCallback((args: Parameters<typeof onPieceDrag>[0]) => {
     return onPieceDrag(args);
-  }, [onPieceDrag, puedeBlancas, puedeNegras]);
+  }, [onPieceDrag]);
+
+  // ── Handlers de navegación (emiten NAVEGAR si es el profesor) ──────────────
+
+  const handleIrANodo = useCallback((nodoId: string) => {
+    irANodo(nodoId);
+    if (esProfesor) {
+      const n = nodos[nodoId];
+      if (n) emitirRef.current?.({
+        tipo: 'NAVEGAR',
+        pgn,
+        fen: n.fen,
+        sonido: n.captura ? 'capture' : 'move',
+      });
+    }
+  }, [irANodo, nodos, esProfesor, pgn]);
+
+  const handleIrAtras = useCallback(() => {
+    const padreId = nodos[nodoActualId]?.padre;
+    irAtras();
+    if (esProfesor && padreId) {
+      emitirRef.current?.({
+        tipo: 'NAVEGAR',
+        pgn,
+        fen: nodos[padreId].fen,
+        sonido: 'move',
+      });
+    }
+  }, [irAtras, nodos, nodoActualId, esProfesor, pgn]);
+
+  const handleIrAdelante = useCallback(() => {
+    const hijoId = nodos[nodoActualId]?.hijos[0];
+    irAdelante();
+    if (esProfesor && hijoId) {
+      const n = nodos[hijoId];
+      emitirRef.current?.({
+        tipo: 'NAVEGAR',
+        pgn,
+        fen: n.fen,
+        sonido: n.captura ? 'capture' : 'move',
+      });
+    }
+  }, [irAdelante, nodos, nodoActualId, esProfesor, pgn]);
+
+  const handleIrAlInicio = useCallback(() => {
+    irAlInicio();
+    if (esProfesor) {
+      emitirRef.current?.({
+        tipo: 'NAVEGAR',
+        pgn,
+        fen: nodos['root'].fen,
+        sonido: 'move',
+      });
+    }
+  }, [irAlInicio, nodos, esProfesor, pgn]);
+
+  const handleIrAlFinal = useCallback(() => {
+    let id = nodoActualId;
+    while (nodos[id]?.hijos.length > 0) id = nodos[id].hijos[0];
+    irAlFinal();
+    if (esProfesor && id !== nodoActualId) {
+      emitirRef.current?.({
+        tipo: 'NAVEGAR',
+        pgn,
+        fen: nodos[id].fen,
+        sonido: 'move',
+      });
+    }
+  }, [irAlFinal, nodos, nodoActualId, esProfesor, pgn]);
+
+  // ── Valores efectivos de eval bar (profesor: props de AulaPage; alumno: estado local) ──
+  const evalLineaEfectiva   = esProfesor ? evalLinea    : evalLineaAlumno;
+  const mostrarEvalEfectivo = esProfesor ? mostrarEvalBar : mostrarEvalAlumno;
 
   const handleGirar = () => {
     const nueva = orientacion === 'white' ? 'black' : 'white';
@@ -189,36 +276,6 @@ export default function VistaAula({
     emitir({ tipo: 'REINICIO', pgn: '', fen: fenInicial });
     persistirTablero('', fenInicial);
   };
-
-  const sonidoDeIndice = useCallback((indice: number): 'move' | 'capture' => {
-    if (indice <= 0) return 'move';
-    return historialMovimientos[indice - 1]?.captured ? 'capture' : 'move';
-  }, [historialMovimientos]);
-
-  const handleSetIndiceVista = useCallback((indice: number) => {
-    setIndiceVista(indice);
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice, sonido: sonidoDeIndice(indice) });
-  }, [setIndiceVista, esProfesor, pgn, emitir, sonidoDeIndice]);
-
-  const handleIrAlInicio = useCallback(() => {
-    irAlInicio();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: 0, sonido: 'move' });
-  }, [irAlInicio, esProfesor, pgn, emitir]);
-
-  const handleIrAtras = useCallback(() => {
-    irAtras();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.max(0, indiceVista - 1), sonido: sonidoDeIndice(Math.max(0, indiceVista - 1)) });
-  }, [irAtras, esProfesor, pgn, indiceVista, emitir, sonidoDeIndice]);
-
-  const handleIrAdelante = useCallback(() => {
-    irAdelante();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: Math.min(totalMoves, indiceVista + 1), sonido: sonidoDeIndice(Math.min(totalMoves, indiceVista + 1)) });
-  }, [irAdelante, esProfesor, pgn, indiceVista, totalMoves, emitir, sonidoDeIndice]);
-
-  const handleIrAlFinal = useCallback(() => {
-    irAlFinal();
-    if (esProfesor) emitir({ tipo: 'NAVEGAR', pgn, indice: totalMoves, sonido: sonidoDeIndice(totalMoves) });
-  }, [irAlFinal, esProfesor, pgn, totalMoves, emitir, sonidoDeIndice]);
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-4 bg-white rounded-2xl shadow-sm border border-slate-200 relative">
@@ -261,13 +318,13 @@ export default function VistaAula({
       {/* Tablero + Planilla */}
       <div className="w-full flex flex-col lg:flex-row gap-6 px-4 items-stretch justify-center">
 
-        {/* Tablero con barra de evaluación opcional */}
+        {/* Tablero */}
         <div className="flex-1 max-w-[550px] w-full shadow-xl rounded-sm overflow-hidden border-4 border-[#302e2c] flex">
-          {mostrarEvalBar && evalLinea && (
+          {mostrarEvalEfectivo && evalLineaEfectiva && (
             <div className="w-5 shrink-0 border-r-4 border-[#302e2c]">
               <EvalBarVertical
-                evaluacion={evalLinea.evaluacion}
-                mate={evalLinea.mate ?? null}
+                evaluacion={evalLineaEfectiva.evaluacion}
+                mate={evalLineaEfectiva.mate ?? null}
                 turnoBlancas={turnoBlancas}
                 orientation={orientacion}
                 activo={true}
@@ -294,9 +351,9 @@ export default function VistaAula({
           <div className="absolute inset-0 flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2">
               <Planilla
-                historialMovimientos={historialMovimientos}
-                indiceVista={indiceVista}
-                setIndiceVista={handleSetIndiceVista}
+                nodos={nodos}
+                nodoActualId={nodoActualId}
+                irANodo={handleIrANodo}
                 estamosEnElPresente={estamosEnElPresente}
                 irAlInicio={handleIrAlInicio}
                 irAtras={handleIrAtras}
