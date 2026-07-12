@@ -150,7 +150,7 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
           <button
             onClick={() => { setModo('youtube'); setError(''); }}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl border transition-colors cursor-pointer
-              ${modo === 'youtube' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+              ${modo === 'youtube' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
           >
             <Play className="w-4 h-4" /> Vídeo de YouTube
           </button>
@@ -174,7 +174,7 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
               value={nombre}
               onChange={e => setNombre(e.target.value)}
               placeholder="Ej: Sesión 4 - Finales de torre"
-              className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-full text-slate-900 text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
               autoFocus
             />
           </div>
@@ -221,13 +221,13 @@ export default function ModalSubirMaterial({ carpetaId, onClose, onSubido }: Pro
                 value={youtubeUrl}
                 onChange={e => setYoutubeUrl(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full text-slate-900 text-sm px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
               <div className="mt-2 flex items-start gap-2 text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg">
                 <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-500" />
                 <span>
-                  Si el vídeo no debe ser público, súbelo a YouTube como <strong>"No listado"</strong> (no como "Privado").
-                  Los vídeos no listados se pueden reproducir aquí dentro pero no aparecen en búsquedas.
+                  Si el vídeo no debe ser público, súbelo a YouTube como <strong>"Oculto"</strong> (no como "Privado").
+                  Los vídeos ocultos se pueden reproducir aquí dentro pero no aparecen en búsquedas.
                 </span>
               </div>
             </div>
