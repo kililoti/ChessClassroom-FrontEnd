@@ -796,7 +796,7 @@ export default function VistaPartida({
       {bannerFin && (() => {
         const info = infoBannerFin();
         return (
-          <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6 bg-slate-900/30">
+          <div className="absolute inset-0 rounded-2xl z-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-5">
               <div className={`w-20 h-20 rounded-full ${info.color} flex items-center justify-center`}>
                 <span className="text-4xl">{info.icono}</span>
