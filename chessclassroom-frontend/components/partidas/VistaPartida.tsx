@@ -12,7 +12,7 @@ import Planilla from '@/components/ajedrez/Planilla';
 import PanelStockfish from '@/components/ajedrez/PanelStockfish';
 import EvalBarVertical from '@/components/ajedrez/EvalBarVertical';
 
-const API = 'http://localhost:3001/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 function getToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : '';
