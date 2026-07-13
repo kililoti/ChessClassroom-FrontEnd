@@ -17,7 +17,7 @@ export default function DashboardPage() {
 
     if (!token || !usuarioGuardado) {
       // Si no hay sesión, se expulsa al login
-      router.push('/login');
+      router.push('/');
     } else {
       // Si hay sesión, carga sus datos
       setUsuario(JSON.parse(usuarioGuardado));
@@ -28,7 +28,7 @@ export default function DashboardPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
-    router.push('/login');
+    router.push('/');
   };
 
   if (cargando) {
